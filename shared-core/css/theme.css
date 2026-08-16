@@ -1197,7 +1197,7 @@ body.light .skel-row::after {
   #search-bar {
     top: calc(8px + env(safe-area-inset-top, 0px));
     left: 60px;
-    right: 8px;
+    right: 62px;
     width: auto;
   }
 
@@ -1254,8 +1254,9 @@ body.light .skel-row::after {
   #legend { display: none; }
 
   /* Basemap control moves below the search bar, top-left; its dropdown
-     keeps opening to the right (the default) so it stays on screen. */
-  #basemap-gallery { top: 60px; bottom: auto; left: 8px; }
+     keeps opening to the right (the default) so it stays on screen.
+     Sits below the compass/zoom column (ctrl ends at ~210px). */
+  #basemap-gallery { top: 216px; bottom: auto; left: 8px; }
 
   /* MapLibre controls: nav sits at the top-left below the toolbar
      (the legend is hidden on mobile, so this area is free). Stacking

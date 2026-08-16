@@ -589,6 +589,15 @@ body.light #basemap-select option {
     height: 44px;
   }
 
+  /* Override the desktop left:352 baseline so the basemap button joins
+     the left control column below the compass/zoom stack (which ends
+     around 210px) instead of overlapping it. */
+  #basemap-gallery {
+    top: 216px;
+    bottom: auto;
+    left: 8px;
+  }
+
   #menu-btn {
     top: 8px;
     right: 8px;
