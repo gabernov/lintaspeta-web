@@ -671,8 +671,8 @@ body.light .attrib-toggle-text a { color: #2563EB; }
   overflow: visible !important;
 }
 .custom-controls .ctrl-compass {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50% !important;
   border: 1px solid #E0E0E0 !important;
   background: #FFFFFF !important;
@@ -700,7 +700,7 @@ body.light .attrib-toggle-text a { color: #2563EB; }
   transform: scale(0.95);
 }
 .custom-controls .ctrl-zoom {
-  border-radius: 18px;
+  border-radius: 22px;
   overflow: hidden;
   border: 1px solid #E0E0E0 !important;
   background: #FFFFFF !important;
@@ -708,11 +708,11 @@ body.light .attrib-toggle-text a { color: #2563EB; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 36px;
+  width: 44px;
 }
 .custom-controls .ctrl-zoom button {
-  width: 36px;
-  height: 28px;
+  width: 44px;
+  height: 34px;
   background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
