@@ -1064,9 +1064,10 @@ export const module = {
     map = ctx.map;
 
     Loading.show("Loading data...");
+    Loading.setStage?.(30000, 90000);
     await initParquet();
     const dataUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
-    roadsGeoJSON = await loadParquetToGeoJSON(dataUrl);
+    roadsGeoJSON = await loadParquetToGeoJSON(dataUrl, () => Loading.heartbeat?.());
     Loading.hide();
 
     createDOM();

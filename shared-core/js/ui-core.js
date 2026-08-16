@@ -9,16 +9,108 @@ export function toast(msg, ms = 3000) {
   toastTimer = setTimeout(() => t.classList.remove("show"), ms);
 }
 
+/* ─── Loading overlay with stage watchdog ────────────────────
+   Every loading phase calls Loading.setStage() so the shell knows what
+   is happening. A watchdog re-arms on each heartbeat() (real progress);
+   if a stage stalls past warningMs a "slow" hint appears, and past the
+   deadline the overlay flips to a stuck/error state with a retry button
+   — users are never left staring at a silent spinner. */
+let stageTimer = null;
+let stageWarned = false;
+
+function clearStageTimer() {
+  if (stageTimer) {
+    clearTimeout(stageTimer);
+    stageTimer = null;
+  }
+}
+
+function resetStageUI() {
+  const el = document.getElementById("loading");
+  const warning = document.getElementById("load-warning");
+  const errorBox = document.getElementById("load-error");
+  const retry = document.getElementById("load-retry");
+  if (el) el.classList.remove("is-stuck", "is-error");
+  if (warning) warning.textContent = "";
+  if (errorBox) {
+    errorBox.classList.add("hidden");
+    errorBox.textContent = "";
+  }
+  if (retry) retry.style.display = "none";
+}
+
 export const Loading = {
   show(text) {
     const el = document.getElementById("loading");
     const status = document.getElementById("load-status");
     if (el) el.classList.remove("hidden");
     if (status && text) status.textContent = text;
+    resetStageUI();
+    this.setStage();
   },
+
   hide() {
     const el = document.getElementById("loading");
+    const status = document.getElementById("load-status");
     if (el) el.classList.add("hidden");
+    if (status) status.textContent = "";
+    this.clearStage();
+  },
+
+  /* Mark the current phase and (re)arm the watchdog. Call right before
+     a long operation; call heartbeat() whenever real progress arrives
+     (e.g. bytes downloaded, batch parsed) to prove it's not stuck. */
+  setStage(warningMs = 12000, stuckMs = 40000) {
+    clearStageTimer();
+    stageWarned = false;
+    resetStageUI();
+
+    const el = document.getElementById("loading");
+    const warning = document.getElementById("load-warning");
+    const errorBox = document.getElementById("load-error");
+    const retry = document.getElementById("load-retry");
+
+    stageTimer = setTimeout(() => {
+      if (!stageWarned) {
+        stageWarned = true;
+        if (warning) warning.textContent = "Masih memuat… koneksi mungkin lambat.";
+      }
+      stageTimer = setTimeout(() => {
+        if (el) el.classList.add("is-stuck", "is-error");
+        if (errorBox) {
+          errorBox.textContent = "Pemuatan terhenti. Periksa koneksi internet Anda, lalu coba lagi.";
+        }
+        if (retry) retry.style.display = "inline-flex";
+      }, Math.max(0, stuckMs - warningMs));
+    }, warningMs);
+  },
+
+  /* Real progress signal — resets the stall timers and dismisses the
+     "stuck" state (e.g. a byte made it through, a batch was parsed). */
+  heartbeat() {
+    clearStageTimer();
+    const el = document.getElementById("loading");
+    if (el) el.classList.remove("is-stuck");
+    this.setStage();
+  },
+
+  clearStage() {
+    clearStageTimer();
+    stageWarned = false;
+  },
+
+  /* Hard error — show the message and always reveal the retry button. */
+  fail(msg) {
+    const el = document.getElementById("loading");
+    const errorBox = document.getElementById("load-error");
+    const retry = document.getElementById("load-retry");
+    if (el) el.classList.add("is-error");
+    if (errorBox) {
+      errorBox.classList.remove("hidden");
+      errorBox.textContent = msg || "Terjadi kesalahan saat memuat data.";
+    }
+    if (retry) retry.style.display = "inline-flex";
+    this.clearStage();
   }
 };
 

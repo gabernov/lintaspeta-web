@@ -110,13 +110,18 @@
         letter-spacing="0.28">LintasPeta</text>
 </svg>
 
-<!-- Loading overlay — outside #map so z-index:100 covers ALL UI -->
+<!-- Loading overlay — outside #map so z-index:100 covers ALL UI.
+     #load-warning shows a "slow connection" hint after a stage stalls;
+     #load-error + #load-retry flip the overlay into a recoverable
+     stuck state (pointer-events re-enabled via .is-error). -->
 <div id="loading">
   <div class="spinner-box">
     <div class="spinner"></div>
     <div>Loading map core...</div>
     <div class="status" id="load-status"></div>
+    <div class="warning" id="load-warning"></div>
     <div class="error" id="load-error"></div>
+    <button type="button" id="load-retry" style="display:none;">Muat Ulang</button>
   </div>
 </div>
 
@@ -172,18 +177,32 @@
   // STEP 3: INIT MAP + LOADING OVERLAY + STARFIELD
   // Loading screen stays up until map, tiles AND stars are fully
   // rendered (globe projection + starfield layer + milkyway texture).
+  // Each phase re-arms the watchdog so the overlay always tells the
+  // user what is happening (and flips to "stuck" + retry if a phase
+  // stalls).
   // ═══════════════════════════════════════════════════════════
   const map = initMap({ container: "map" });
 
-  await waitForMapReady(map);
-  await addStarfield(map);
+  Loading.setStage();
+  $("load-status").textContent = "Memuat peta…";
   await waitForMapReady(map);
 
+  $("load-status").textContent = "Memuat bintang (texture bima sakti)…";
+  await addStarfield(map);
+
+  $("load-status").textContent = "Menyelesaikan render…";
+  await waitForMapReady(map);
+
+  Loading.clearStage();
   $("loading").classList.add("hidden");
   $("load-status").textContent = "";
 
   layoutTopLeftControls();
   window.addEventListener("resize", layoutTopLeftControls);
+
+  // Retry button: full page reload is the simplest reliable recovery
+  // for a stalled first load (network, WASM, or texture fetch).
+  $("load-retry").addEventListener("click", () => location.reload());
 
   Registry.ctx = {
     map,

@@ -633,6 +633,7 @@ export const module = {
     map = ctx.map;
 
     Loading.show("Loading data...");
+    Loading.setStage?.(30000, 90000);
     await initParquet();
 
     const jaringanUrl = new URL('data/jaringan_jalan.parquet', import.meta.url);
@@ -640,9 +641,9 @@ export const module = {
     const ruasUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
 
     const [jaringanResult, rambuResult, ruasResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(jaringanUrl),
-      loadParquetToGeoJSON(rambuUrl),
-      loadParquetToGeoJSON(ruasUrl)
+      loadParquetToGeoJSON(jaringanUrl, () => Loading.heartbeat?.()),
+      loadParquetToGeoJSON(rambuUrl, () => Loading.heartbeat?.()),
+      loadParquetToGeoJSON(ruasUrl, () => Loading.heartbeat?.())
     ]);
 
     if (jaringanResult.status === "fulfilled") {

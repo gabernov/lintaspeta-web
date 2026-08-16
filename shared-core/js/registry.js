@@ -134,6 +134,9 @@ export const Registry = {
         this._hideLoading();
         return;
       }
+      // Re-arm the watchdog: module.init() may download + parse
+      // parquet files (multi-MB), which is the longest user-visible wait.
+      this.ctx.ui?.Loading?.setStage?.(30000, 90000);
       try {
         await module.init({ map, data: null, config, ui, search });
         this._loaded = { module, config };

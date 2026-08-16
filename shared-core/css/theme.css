@@ -40,6 +40,13 @@ button:active, .mode-btn:active, .filter-btn:active,
   transition: opacity 300ms ease;
 }
 
+/* The retry button must be clickable — re-enable pointer events in the
+   stuck/error state only (normal loading stays inert). */
+#loading.is-error,
+#loading.is-stuck {
+  pointer-events: auto;
+}
+
 #loading.hidden {
   display: none;
 }
@@ -50,8 +57,37 @@ button:active, .mode-btn:active, .filter-btn:active,
   animation: spin 0.8s linear infinite; margin-bottom: 16px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-#loading .error { color: #EF4444; margin-top: 12px; font-size: 12px; max-width: 500px; text-align: center; word-break: break-all; }
 #loading .status { color: #94A3B8; margin-top: 8px; font-size: 12px; }
+#loading .warning {
+  color: #F59E0B; margin-top: 8px; font-size: 12px;
+  opacity: 0; transition: opacity 300ms ease;
+}
+#loading.is-stuck .warning { opacity: 1; }
+#loading .error {
+  color: #EF4444; margin-top: 12px; font-size: 12px;
+  max-width: 500px; text-align: center; word-break: break-all;
+}
+#loading .error.hidden { display: none; }
+#loading #load-retry {
+  pointer-events: auto;
+  margin-top: 16px;
+  padding: 8px 20px;
+  border: 1px solid rgba(37,99,235,0.5);
+  border-radius: 999px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+#loading #load-retry:hover { background: #1D4ED8; }
+#loading #load-retry:active { transform: scale(0.97); }
+#loading #load-retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.4);
+}
 
 /* Drop overlay */
 #drop-overlay {

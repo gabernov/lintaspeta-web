@@ -900,13 +900,14 @@ export const module = {
     map = ctx.map;
 
     Loading.show("Loading data...");
+    Loading.setStage?.(30000, 90000);
     await initParquet();
     const roadsUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
     const schoolsUrl = new URL('data/sekolah_merged.parquet', import.meta.url);
 
     const [roadsResult, schoolsResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(roadsUrl),
-      loadParquetToGeoJSON(schoolsUrl)
+      loadParquetToGeoJSON(roadsUrl, () => Loading.heartbeat?.()),
+      loadParquetToGeoJSON(schoolsUrl, () => Loading.heartbeat?.())
     ]);
 
     if (roadsResult.status === "fulfilled") {
