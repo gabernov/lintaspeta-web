@@ -783,7 +783,7 @@ body:not(.light) .custom-controls .ctrl-zoom button svg path {
    ruas-jalan/styles.css) so the controls never get visually attached
    to the panel edge across all modes. */
 .maplibregl-ctrl-top-left {
-  top: 56px;
+  top: 64px;
   left: 352px;
   margin: 0 !important;
   z-index: 5;
@@ -1275,7 +1275,7 @@ body.light .skel-row::after {
      (attribution below zoom) is handled by the global flex rule. Scale
      control is redundant on small screens. */
   .maplibregl-ctrl-top-left {
-    top: 108px;
+    top: 112px;
     left: 8px;
   }
   .maplibregl-ctrl-bottom-left { display: none; }

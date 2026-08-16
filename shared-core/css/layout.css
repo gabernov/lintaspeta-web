@@ -117,7 +117,7 @@ body:not(.light) #brand-mark text {
 /* ─── Top-left toolbar (theme toggle) — below zoom controls ── */
 #toolbar {
   position: absolute;
-  top: 186px;
+  top: 194px;
   left: 352px;
   z-index: 5;
   display: flex;
@@ -161,7 +161,7 @@ body:not(.light) #brand-mark text {
 /* ─── Basemap picker (below theme toggle) ─────────────────── */
 #basemap-gallery {
   position: absolute;
-  top: 234px;
+  top: 246px;
   bottom: auto;
   left: 352px;
   z-index: 5;
@@ -591,10 +591,10 @@ body.light #basemap-select option {
 
   /* Override the desktop left:352 baseline so the basemap button joins
      the left control column below the compass/zoom stack (which ends
-     around 228px now that compass/zoom match the 44px button size)
+     around 234px now that compass/zoom match the 44px button size)
      instead of overlapping it. */
   #basemap-gallery {
-    top: 236px;
+    top: 242px;
     bottom: auto;
     left: 8px;
   }
