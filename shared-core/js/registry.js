@@ -63,11 +63,6 @@ export const Registry = {
     if (this.ctx?.ui?.Loading?.show) {
       this.ctx.ui.Loading.show(`Memuat ${mode.title || id}…`);
     }
-    // Show the panel skeleton right away so the info area never goes
-    // blank while the old panel is torn down and the new one is built.
-    if (this.ctx?.ui?.PanelSkeleton?.show) {
-      this.ctx.ui.PanelSkeleton.show();
-    }
     if (this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
       await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
@@ -78,6 +73,16 @@ export const Registry = {
     // 3. Set active
     this.currentId = id;
     this._closeMenu();
+
+    // Show the panel skeleton only AFTER the old panel is removed — the
+    // old panel stays visible during the fly-out, so showing the skeleton
+    // earlier would render two overlapping panels side by side.
+    // Track ownership so a LATE _hideLoading from a previous activate
+    // (still awaiting postInitFn/addStarfield) cannot hide this one.
+    this._skeletonOwnerId = id;
+    if (this.ctx?.ui?.PanelSkeleton?.show) {
+      this.ctx.ui.PanelSkeleton.show();
+    }
 
     // 4. Toggle active class on menu mode rows
     document.querySelectorAll("#menu-panel .mode-btn").forEach((btn) => {
@@ -129,6 +134,16 @@ export const Registry = {
         this._hideLoading();
         return;
       }
+      // When a module mounts its real panel it fires "panel-mounted".
+      // Drop the skeleton as soon as that happens (the panel is in the
+      // DOM and covers the placeholder area), instead of waiting for the
+      // full init (parquet load + layer adds) to finish.
+      if (!this._onPanelMounted) {
+        this._onPanelMounted = () => {
+          this.ctx?.ui?.PanelSkeleton?.hide();
+        };
+        document.addEventListener("panel-mounted", this._onPanelMounted);
+      }
       try {
         await module.init({ map, data: null, config, ui, search });
         this._loaded = { module, config };
@@ -142,14 +157,20 @@ export const Registry = {
       await postInitFn(this.ctx.map);
     }
 
-    this._hideLoading();
+    this._hideLoading(id);
   },
 
-  _hideLoading() {
+  _hideLoading(ownerId) {
     if (this.ctx?.ui?.Loading?.hide) {
       this.ctx.ui.Loading.hide();
     }
-    if (this.ctx?.ui?.PanelSkeleton?.hide) {
+    // Only hide the skeleton if THIS activate owns it. A previous
+    // activate's late-finishing _hideLoading (awaited postInitFn) must
+    // not hide the skeleton of the mode that replaced it.
+    if (
+      this.ctx?.ui?.PanelSkeleton?.hide &&
+      (!ownerId || this._skeletonOwnerId === ownerId)
+    ) {
       this.ctx.ui.PanelSkeleton.hide();
     }
   },
