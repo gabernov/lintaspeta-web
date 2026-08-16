@@ -302,3 +302,138 @@ function hideSearchDropdown() {
 }
 
 export function getSearchHandler() { return currentSearchHandler; }
+
+/* ─── Mobile bottom sheet — shared by all modes ──────────────
+   Turns #panel into a draggable bottom sheet on ≤600px screens:
+   • tap the grab handle / header → toggle open/collapsed
+   • swipe the handle area up/down → open/collapsed with drag follow
+   Modules call this once after creating their panel; it wires the
+   header, toggle button and handle, and returns a teardown() so the
+   listeners are removed on mode switch. */
+export function initBottomSheet({ panel, handle, toggle, header }) {
+  if (!panel) return null;
+
+  const isMobile = () => window.matchMedia("(max-width: 600px)").matches;
+
+  const applyTransform = (animate = true) => {
+    if (!isMobile()) { panel.style.transform = ""; return; }
+    panel.style.transition = animate ? "" : "none";
+    const collapsedH = (handle?.offsetHeight || 0) + (header?.offsetHeight || 0);
+    panel.style.transform = panel.classList.contains("collapsed")
+      ? `translateY(calc(100% - ${collapsedH}px))`
+      : "translateY(0px)";
+    if (!animate) requestAnimationFrame(() => { panel.style.transition = ""; });
+  };
+
+  const sync = () => {
+    if (!header.dataset.userToggled) {
+      panel.classList.toggle("collapsed", isMobile());
+      if (toggle) toggle.setAttribute("aria-expanded", String(!isMobile()));
+      applyTransform(false);
+    }
+  };
+
+  const setOpen = (open, animate = true) => {
+    header.dataset.userToggled = "1";
+    panel.classList.toggle("collapsed", !open);
+    applyTransform(animate);
+    if (toggle) {
+      toggle.title = open ? "Minimalkan panel" : "Buka panel";
+      toggle.setAttribute("aria-expanded", String(open));
+    }
+  };
+
+  const toggleOpen = () => setOpen(panel.classList.contains("collapsed"));
+
+  // Drag state (shared by pointer + touch events)
+  let dragging = null;
+
+  const collapsedOffset = () => {
+    const collapsedH = (handle?.offsetHeight || 0) + (header?.offsetHeight || 0);
+    return Math.round((panel.offsetHeight - collapsedH) / panel.offsetHeight * 100);
+  };
+
+  const onDragStart = (startY) => {
+    if (!isMobile()) return;
+    dragging = { startY, wasCollapsed: panel.classList.contains("collapsed") };
+    panel.style.transition = "none";
+    document.body.style.touchAction = "none";
+  };
+  const onDragMove = (clientY) => {
+    if (!dragging) return;
+    const dy = clientY - dragging.startY;
+    // Base position in px: 0 when open, offset below when collapsed.
+    const base = dragging.wasCollapsed ? panel.offsetHeight * collapsedOffset() / 100 : 0;
+    const next = Math.max(0, Math.min(panel.offsetHeight, base + dy));
+    panel.style.transform = `translateY(${next}px)`;
+  };
+  const onDragEnd = () => {
+    if (!dragging) return;
+    const { wasCollapsed } = dragging;
+    dragging = null;
+    document.body.style.touchAction = "";
+    // Snap: open if dragged more than half the collapsed offset upward.
+    const threshold = Math.round(panel.offsetHeight * collapsedOffset() / 100 / 2);
+    const currentY = parseFloat(panel.style.transform.match(/translateY\(([-\d.]+)px\)/)?.[1] || "0");
+    const shouldOpen = wasCollapsed ? currentY < threshold : true;
+    const shouldCollapse = !wasCollapsed ? currentY > threshold : false;
+    setOpen(shouldOpen && !shouldCollapse, true);
+  };
+
+  const onPointerDown = (e) => {
+    if (e.target.closest("button")) return;
+    onDragStart(e.clientY);
+    const move = (ev) => onDragMove(ev.clientY);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      onDragEnd();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const onTouchStart = (e) => {
+    if (e.target.closest("button")) return;
+    onDragStart(e.touches[0].clientY);
+    const move = (ev) => { ev.preventDefault(); onDragMove(ev.touches[0].clientY); };
+    const up = () => {
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", up);
+      onDragEnd();
+    };
+    document.addEventListener("touchmove", move, { passive: false });
+    document.addEventListener("touchend", up);
+  };
+
+  const onHeaderClick = (e) => {
+    if (e.target.closest("button")) return;
+    toggleOpen();
+  };
+
+  // Wire up
+  if (header) {
+    header.addEventListener("click", onHeaderClick);
+    header.addEventListener("pointerdown", onPointerDown);
+  }
+  if (handle) {
+    handle.addEventListener("pointerdown", onPointerDown);
+    handle.addEventListener("touchstart", onTouchStart, { passive: false });
+  }
+  if (toggle) toggle.addEventListener("click", (e) => { e.stopPropagation(); toggleOpen(); });
+  const onResize = () => sync();
+  window.addEventListener("resize", onResize);
+  sync();
+
+  return function teardown() {
+    if (header) {
+      header.removeEventListener("click", onHeaderClick);
+      header.removeEventListener("pointerdown", onPointerDown);
+    }
+    if (handle) {
+      handle.removeEventListener("pointerdown", onPointerDown);
+      handle.removeEventListener("touchstart", onTouchStart);
+    }
+    window.removeEventListener("resize", onResize);
+  };
+}

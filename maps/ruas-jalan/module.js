@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -48,8 +48,7 @@ let roadMouseLeaveHandler = null;
 let roadClickHandler = null;
 let outsideClickHandler = null;
 let resizeHandler = null;
-let panelToggleClickHandler = null;
-let sheetHeaderClickHandler = null;
+let sheetTeardown = null;
 let searchInputHandler = null;
 let searchKeydownHandler = null;
 let searchFocusHandler = null;
@@ -787,40 +786,7 @@ function removeDOM() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PANEL COLLAPSE (simplified for Phase 1 — no drag gesture)
-// ═══════════════════════════════════════════════════════════
-function syncPanelToggle() {
-  const isMobile = window.matchMedia("(max-width: 600px)").matches;
-  if (!panelHeader.dataset.userToggled) {
-    panel.classList.toggle("collapsed", isMobile);
-    if (panelToggle) {
-      panelToggle.setAttribute("aria-expanded", String(!isMobile));
-      panelToggle.title = isMobile ? "Buka panel" : "Minimalkan panel";
-    }
-    applySheetTransform(false);
-  }
-}
-
-function applySheetTransform(animate = true) {
-  const mq = window.matchMedia("(max-width: 600px)").matches;
-  if (!mq) { panel.style.transform = ""; return; }
-  panel.style.transition = animate ? "" : "none";
-  const collapsedH = (sheetHandle?.offsetHeight || 0) + (panelHeader?.offsetHeight || 0);
-  panel.style.transform = panel.classList.contains("collapsed")
-    ? `translateY(calc(100% - ${collapsedH}px))`
-    : "translateY(0px)";
-  if (!animate) requestAnimationFrame(() => { panel.style.transition = ""; });
-}
-
-function sheetSetOpen(open, animate = true) {
-  panelHeader.dataset.userToggled = "1";
-  panel.classList.toggle("collapsed", !open);
-  applySheetTransform(animate);
-  if (panelToggle) {
-    panelToggle.title = open ? "Minimalkan panel" : "Buka panel";
-    panelToggle.setAttribute("aria-expanded", String(open));
-  }
-}
+// PANEL COLLAPSE — handled by shared initBottomSheet (ui-core.js)
 
 // ═══════════════════════════════════════════════════════════
 // EVENT WIRING
@@ -1038,24 +1004,6 @@ function setupDragDrop() {
   document.body.addEventListener("drop", dropHandler);
 }
 
-function setupPanel() {
-  panelToggleClickHandler = (e) => {
-    e.stopPropagation();
-    sheetSetOpen(panel.classList.contains("collapsed"), true);
-  };
-  panelToggle.addEventListener("click", panelToggleClickHandler);
-
-  sheetHeaderClickHandler = (e) => {
-    if (e.target.closest("button")) return;
-    sheetSetOpen(panel.classList.contains("collapsed"), true);
-  };
-  panelHeader.addEventListener("click", sheetHeaderClickHandler);
-
-  resizeHandler = () => { syncPanelToggle(); };
-  window.addEventListener("resize", resizeHandler);
-  syncPanelToggle();
-}
-
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 // ═══════════════════════════════════════════════════════════
@@ -1076,7 +1024,8 @@ export const module = {
     updateStats();
     setupSearch();
     setupDragDrop();
-    setupPanel();
+    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
+    sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
 
     fileDrop.classList.add("file-drop-zone--loaded");
     fileStatus.className = "file-status file-status--success";
@@ -1195,6 +1144,11 @@ export const module = {
     if (resizeHandler) {
       window.removeEventListener('resize', resizeHandler);
       resizeHandler = null;
+    }
+    // Shared bottom sheet teardown (header/handle/toggle listeners)
+    if (sheetTeardown) {
+      sheetTeardown();
+      sheetTeardown = null;
     }
     if (dragEnterHandler) {
       document.body.removeEventListener('dragenter', dragEnterHandler);

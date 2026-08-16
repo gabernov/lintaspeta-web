@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, showPopup, closePopup } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -45,9 +45,7 @@ let rambuHitboxLeaveHandler = null;
 let rambuPointsEnterHandler = null;
 let rambuPointsLeaveHandler = null;
 let kelasFilterClickHandler = null;
-let panelToggleClickHandler = null;
-let sheetHeaderClickHandler = null;
-let resizeHandler = null;
+let sheetTeardown = null;
 let fileDropClickHandler = null;
 let fileInputChangeHandler = null;
 let dragEnterHandler = null;
@@ -533,40 +531,7 @@ function removeDOM() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PANEL COLLAPSE (simplified — no drag gesture)
-// ═══════════════════════════════════════════════════════════
-function syncPanelToggle() {
-  const isMobile = window.matchMedia("(max-width: 600px)").matches;
-  if (!panelHeader.dataset.userToggled) {
-    panel.classList.toggle("collapsed", isMobile);
-    if (panelToggle) {
-      panelToggle.setAttribute("aria-expanded", String(!isMobile));
-      panelToggle.title = isMobile ? "Buka panel" : "Minimalkan panel";
-    }
-    applySheetTransform(false);
-  }
-}
-
-function applySheetTransform(animate = true) {
-  const mq = window.matchMedia("(max-width: 600px)").matches;
-  if (!mq) { panel.style.transform = ""; return; }
-  panel.style.transition = animate ? "" : "none";
-  const collapsedH = (sheetHandle?.offsetHeight || 0) + (panelHeader?.offsetHeight || 0);
-  panel.style.transform = panel.classList.contains("collapsed")
-    ? `translateY(calc(100% - ${collapsedH}px))`
-    : "translateY(0px)";
-  if (!animate) requestAnimationFrame(() => { panel.style.transition = ""; });
-}
-
-function sheetSetOpen(open, animate = true) {
-  panelHeader.dataset.userToggled = "1";
-  panel.classList.toggle("collapsed", !open);
-  applySheetTransform(animate);
-  if (panelToggle) {
-    panelToggle.title = open ? "Minimalkan panel" : "Buka panel";
-    panelToggle.setAttribute("aria-expanded", String(open));
-  }
-}
+// PANEL COLLAPSE — handled by shared initBottomSheet (ui-core.js)
 
 // ═══════════════════════════════════════════════════════════
 // EVENT WIRING
@@ -605,24 +570,6 @@ function setupDragDrop() {
   document.body.addEventListener("dragleave", dragLeaveHandler);
   document.body.addEventListener("dragover", dragOverHandler);
   document.body.addEventListener("drop", dropHandler);
-}
-
-function setupPanel() {
-  panelToggleClickHandler = (e) => {
-    e.stopPropagation();
-    sheetSetOpen(panel.classList.contains("collapsed"), true);
-  };
-  panelToggle.addEventListener("click", panelToggleClickHandler);
-
-  sheetHeaderClickHandler = (e) => {
-    if (e.target.closest("button")) return;
-    sheetSetOpen(panel.classList.contains("collapsed"), true);
-  };
-  panelHeader.addEventListener("click", sheetHeaderClickHandler);
-
-  resizeHandler = () => { syncPanelToggle(); };
-  window.addEventListener("resize", resizeHandler);
-  syncPanelToggle();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -674,7 +621,8 @@ export const module = {
     updateStats();
     setupFilters();
     setupDragDrop();
-    setupPanel();
+    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
+    sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
 
     // Shared searchbar: search rambu by kode_ruas / nama_ruas
     if (ctx?.search?.registerSearch && rambuGeoJSON) {
@@ -797,10 +745,6 @@ export const module = {
     closePopup();
 
     // Remove document/window listeners
-    if (resizeHandler) {
-      window.removeEventListener("resize", resizeHandler);
-      resizeHandler = null;
-    }
     if (dragEnterHandler) {
       document.body.removeEventListener("dragenter", dragEnterHandler);
       dragEnterHandler = null;
@@ -816,6 +760,12 @@ export const module = {
     if (dropHandler) {
       document.body.removeEventListener("drop", dropHandler);
       dropHandler = null;
+    }
+
+    // Shared bottom sheet teardown (header/handle/toggle listeners)
+    if (sheetTeardown) {
+      sheetTeardown();
+      sheetTeardown = null;
     }
 
     // Remove DOM

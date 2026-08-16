@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -38,7 +38,7 @@ let xlsxLoaded = false;
 // ═══════════════════════════════════════════════════════════
 // DOM REFS
 // ═══════════════════════════════════════════════════════════
-let panel, panelHeader, panelBody;
+let panel, panelHeader, panelBody, panelToggle, sheetHandle, sheetTeardown;
 let fileDrop, fileInput, fileStatus;
 let uptdList, legendEl, legendRoads;
 let dropOverlay;
@@ -539,10 +539,21 @@ function createDOM() {
   panel = document.createElement("div");
   panel.id = "panel";
   panel.innerHTML = `
+    <div id="sheet-handle" aria-hidden="true"></div>
     <div id="panel-header">
       <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg></span>
       <h1>Peta Sekolah Jabar</h1>
       <span class="badge" id="school-badge">0</span>
+      <button id="panel-toggle"
+              class="panel-toggle-btn"
+              title="Minimalkan panel"
+              aria-label="Minimalkan panel"
+              aria-expanded="true"
+              aria-controls="panel-body">
+        <svg viewBox="0 0 512 512" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 81.4 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/>
+        </svg>
+      </button>
     </div>
     <div id="panel-body">
       <div id="stats-panel">
@@ -687,6 +698,8 @@ function createDOM() {
 
   panelHeader = document.getElementById("panel-header");
   panelBody = document.getElementById("panel-body");
+  panelToggle = document.getElementById("panel-toggle");
+  sheetHandle = document.getElementById("sheet-handle");
   fileDrop = document.getElementById("file-drop");
   fileInput = document.getElementById("file-input");
   fileStatus = document.getElementById("file-status");
@@ -932,6 +945,8 @@ export const module = {
     setupFilters();
     setupDragDrop();
     setupCollapsible();
+    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
+    sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
 
     // Shared searchbar: search schools by name / NPSN
     if (ctx?.search?.registerSearch && schoolsGeoJSON) {
@@ -1054,6 +1069,12 @@ export const module = {
     if (dropHandler) {
       document.body.removeEventListener("drop", dropHandler);
       dropHandler = null;
+    }
+
+    // Shared bottom sheet teardown (header/handle/toggle listeners)
+    if (sheetTeardown) {
+      sheetTeardown();
+      sheetTeardown = null;
     }
 
     removeDOM();
