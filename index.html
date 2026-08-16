@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LintasPeta</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%232563EB%22 stroke-width=%222%22><path d=%22M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z%22/></svg>">
+  <script>
+    (function() {
+      var saved = localStorage.getItem('theme');
+      var prefer = window.matchMedia('(prefers-color-scheme: light)').matches;
+      var isLight = saved ? saved === 'light' : prefer;
+      if (isLight) document.documentElement.classList.add('light');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.11.0/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@5.11.0/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="shared-core/css/tokens.css" />
+  <link rel="stylesheet" href="shared-core/css/theme.css" />
+  <link rel="stylesheet" href="shared-core/css/layout.css" />
+  <link rel="stylesheet" href="maps/ruas-jalan/styles.css" />
+  <link rel="stylesheet" href="maps/sekolah/styles.css" />
+  <link rel="stylesheet" href="maps/rambu/styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "@geoql/maplibre-gl-starfield": "https://esm.sh/jsr/@geoql/maplibre-gl-starfield@0.1.2"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<!-- Top-left toolbar: theme toggle (tool section) -->
+<div id="toolbar">
+  <button id="theme-btn" title="Ganti tema" aria-label="Ganti tema">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+  </button>
+</div>
+
+<!-- Basemap picker (below theme toggle) -->
+<div id="basemap-gallery">
+  <button id="basemap-btn" title="Pilih basemap" aria-label="Pilih basemap" aria-haspopup="true" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15"/></svg>
+  </button>
+  <div id="basemap-dropdown">
+    <button class="basemap-item" data-style="liberty"><span class="swatch" style="background:#A0C4FF"></span><span class="label">Liberty</span><span class="check">✓</span></button>
+    <button class="basemap-item" data-style="bright"><span class="swatch" style="background:#FDE68A"></span><span class="label">Bright</span><span class="check">✓</span></button>
+    <button class="basemap-item" data-style="positron"><span class="swatch" style="background:#E2E8F0"></span><span class="label">Positron</span><span class="check">✓</span></button>
+    <button class="basemap-item" data-style="dark"><span class="swatch" style="background:#1E293B"></span><span class="label">Dark</span><span class="check">✓</span></button>
+    <button class="basemap-item" data-style="fiord"><span class="swatch" style="background:#64748B"></span><span class="label">Fiord</span><span class="check">✓</span></button>
+  </div>
+</div>
+
+<!-- Floating kebab menu button (top-right) + dropdown panel -->
+<button id="menu-btn" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+    <circle cx="5" cy="5" r="2.2"/>
+    <circle cx="12" cy="5" r="2.2"/>
+    <circle cx="19" cy="5" r="2.2"/>
+    <circle cx="5" cy="12" r="2.2"/>
+    <circle cx="12" cy="12" r="2.2"/>
+    <circle cx="19" cy="12" r="2.2"/>
+    <circle cx="5" cy="19" r="2.2"/>
+    <circle cx="12" cy="19" r="2.2"/>
+    <circle cx="19" cy="19" r="2.2"/>
+  </svg>
+</button>
+
+<div id="menu-panel" hidden>
+  <div class="menu-header">LintasPeta</div>
+  <div class="menu-section-label">Peta</div>
+  <div id="menu-modes"></div>
+</div>
+
+<!-- Shared search bar (all modes register a search handler) -->
+<div id="search-bar">
+  <div id="search-box">
+    <span id="search-input-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+    </span>
+    <input type="text" id="search-input" placeholder="Cari..." autocomplete="off" />
+    <button id="search-clear" title="Bersihkan" aria-label="Bersihkan pencarian">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div id="search-dropdown"></div>
+  </div>
+</div>
+
+<!-- GPS/locate button (standalone, top-left beside panel) -->
+<button id="locate-btn" title="Lokasi saya" aria-label="Lokasi saya">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+</button>
+
+<!-- Map container -->
+<div id="map"></div>
+
+<!-- Watermark logo (bottom-center) — inline SVG so we get crisp
+     paint-order: stroke fill for an authentic Google-Maps-style outline. -->
+<svg id="brand-mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <text x="50%" y="50%"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-family="'Fira Sans', system-ui, -apple-system, sans-serif"
+        font-size="15"
+        font-weight="500"
+        letter-spacing="0.28">LintasPeta</text>
+</svg>
+
+<!-- Loading overlay — outside #map so z-index:100 covers ALL UI -->
+<div id="loading">
+  <div class="spinner-box">
+    <div class="spinner"></div>
+    <div>Loading map core...</div>
+    <div class="status" id="load-status"></div>
+    <div class="error" id="load-error"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast" role="status"></div>
+
+<!-- Sidebar placeholder — modes mount their panels here (currently unused) -->
+<div id="sidebar" hidden></div>
+
+<script type="module">
+  import { Registry, setPostInitFn } from "./shared-core/js/registry.js";
+  import { initMap, addStarfield, setBasemap, flyToGlobe, layoutTopLeftControls, waitForMapReady } from "./shared-core/js/map-core.js";
+  import { toast, Loading, registerSearch } from "./shared-core/js/ui-core.js";
+
+  const $ = id => document.getElementById(id);
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 1: REGISTER MODES
+  // ═══════════════════════════════════════════════════════════
+  Registry.register({
+    id: "ruas-jalan",
+    title: "Peta Jalan Provinsi",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>`,
+    load: () => import("./maps/ruas-jalan/module.js")
+  });
+  Registry.register({
+    id: "sekolah",
+    title: "Peta Sekolah",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>`,
+    load: () => import("./maps/sekolah/module.js")
+  });
+  Registry.register({
+    id: "rambu",
+    title: "Peta Rambu",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>`,
+    load: () => import("./maps/rambu/module.js")
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 2: RENDER MENU MODE ROWS
+  // ═══════════════════════════════════════════════════════════
+  const menuModes = $("menu-modes");
+  for (const mode of Registry.list()) {
+    const btn = document.createElement("button");
+    btn.className = "mode-btn";
+    btn.dataset.mode = mode.id;
+    btn.innerHTML = `<span class="icon">${mode.icon}</span><span>${mode.title}</span>`;
+    btn.addEventListener("click", () => Registry.activate(mode.id));
+    menuModes.appendChild(btn);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 3: INIT MAP + LOADING OVERLAY + STARFIELD
+  // Loading screen stays up until map, tiles AND stars are fully
+  // rendered (globe projection + starfield layer + milkyway texture).
+  // ═══════════════════════════════════════════════════════════
+  const map = initMap({ container: "map" });
+
+  await waitForMapReady(map);
+  await addStarfield(map);
+  await waitForMapReady(map);
+
+  $("loading").classList.add("hidden");
+  $("load-status").textContent = "";
+
+  layoutTopLeftControls();
+  window.addEventListener("resize", layoutTopLeftControls);
+
+  Registry.ctx = {
+    map,
+    ui: { toast, Loading },
+    search: { registerSearch },
+    flyToGlobe,
+    getBasemapStyle: () => currentBasemap,
+    setBasemap: (styleName) => {
+      if (getBasemapStyle() === styleName) return Promise.resolve();
+      applyBasemapStyle(styleName);
+      return Promise.resolve();
+    },
+  };
+
+  setPostInitFn(async (map) => {
+    await addStarfield(map);
+    layoutTopLeftControls();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 4: KEBAB MENU WIRING (open/close + outside click + Escape)
+  // ═══════════════════════════════════════════════════════════
+  Registry.initMenu({
+    btnId: "menu-btn",
+    panelId: "menu-panel",
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 5: BASEMAP DROPDOWN (top-left, below theme toggle)
+  // ═══════════════════════════════════════════════════════════
+  const basemapBtn = $("basemap-btn");
+  const basemapDropdown = $("basemap-dropdown");
+  const basemapItems = Array.from(document.querySelectorAll(".basemap-item"));
+  let currentBasemap = "liberty";
+
+  const getBasemapStyle = () => currentBasemap;
+  const applyBasemapStyle = (styleName) => {
+    currentBasemap = styleName;
+    basemapItems.forEach((item) => {
+      const active = item.dataset.style === styleName;
+      item.classList.toggle("active", active);
+    });
+    setBasemap(map, styleName);
+  };
+  const closeBasemap = () => {
+    basemapDropdown.classList.remove("open");
+    basemapBtn.setAttribute("aria-expanded", "false");
+  };
+
+  basemapBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const opening = !basemapDropdown.classList.contains("open");
+    basemapDropdown.classList.toggle("open", opening);
+    basemapBtn.setAttribute("aria-expanded", String(opening));
+  });
+
+  basemapItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      applyBasemapStyle(item.dataset.style);
+      closeBasemap();
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#basemap-gallery")) closeBasemap();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 5b: THEME TOGGLE (top-left toolbar)
+  // Default = LIGHT (user preference). body.light is the default state.
+  // ═══════════════════════════════════════════════════════════
+const MOON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>`;
+const SUN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>`;
+
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const savedTheme = localStorage.getItem("theme");
+  let isLight = savedTheme ? savedTheme === "light" : !prefersDark;
+  document.body.classList.toggle("light", isLight);
+
+  const themeBtn = $("theme-btn");
+  themeBtn.innerHTML = isLight ? SUN_SVG : MOON_SVG;
+  themeBtn.addEventListener("click", () => {
+    isLight = !isLight;
+    document.body.classList.toggle("light", isLight);
+    themeBtn.innerHTML = isLight ? SUN_SVG : MOON_SVG;
+    localStorage.setItem("theme", isLight ? "light" : "dark");
+    const target = isLight ? "bright" : "dark";
+    applyBasemapStyle(target);
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 7: ACTIVATE DEFAULT MODE
+  // ═══════════════════════════════════════════════════════════
+  // In dark mode, switch to a dark basemap before activating so the map
+  // matches the UI. In light mode, keep the initial liberty style (no
+  // redundant setStyle) and only sync the dropdown's active marker.
+  // transformStyle in setBasemap preserves the starfield across the
+  // dark style switch.
+  if (isLight) {
+    basemapItems.forEach((item) => {
+      item.classList.toggle("active", item.dataset.style === "liberty");
+    });
+  } else {
+    applyBasemapStyle("dark");
+  }
+  // Support ?mode=<id> deep-linking (used by the legacy subdomain
+  // redirects: jalan/sekolah/rambukelasjalan → peta.dishubjabar.com).
+  // Falls back to the first registered mode if the param is absent/invalid.
+  const urlMode = new URLSearchParams(location.search).get("mode");
+  const requestedMode =
+    Registry.list().find((m) => m.id === urlMode)?.id ||
+    Registry.list()[0].id;
+  Registry.activate(requestedMode);
+</script>
+
+</body>
+</html>

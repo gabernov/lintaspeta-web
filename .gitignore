@@ -1,0 +1,5 @@
+.codegraph/
+.omo/
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,606 @@
+/* ═══════════════════════════════════════════════════════════
+   layout.css — Shell layout styles
+   Z-index hierarchy, GPS, theme, kebab menu, map container.
+   ═══════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: #0F172A;
+  color: #F8FAFC;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Z-Index Hierarchy
+   ═══════════════════════════════════════════════════════════
+   1   - #map
+   5   - #brand-mark, map buttons (#locate-btn, #toolbar/theme,
+        #basemap-gallery, compass+zoom) — all BELOW the info panel
+   10  - #panel (sidebar)
+   20  - #search-bar
+   40  - #menu-btn, #menu-panel
+   100 - #loading (must be above ALL UI)
+   1000 - #drop-overlay
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Map container (full screen) ─────────────────────────── */
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* ─── Sidebar placeholder — unused ────────────────────────── */
+#sidebar {
+  display: none;
+}
+
+/* ─── Watermark logo (bottom-center) — Google-Maps-style: dark
+   fill + white outline via paint-order, no glow needed. ──── */
+#brand-mark {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 150px;
+  height: 26px;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+
+#brand-mark text {
+  /* Dark fill, white outline, drawn OUTWARD via paint-order. */
+  fill: #0F172A;
+  stroke: #FFFFFF;
+  stroke-width: 3px;
+  paint-order: stroke fill;
+  /* Subtle offset drop shadow, like the real Google Maps mark. */
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35));
+}
+
+/* Invert on dark basemaps: light fill, dark outline. */
+body:not(.light) #brand-mark text {
+  fill: #FFFFFF;
+  stroke: #0F172A;
+}
+
+/* ─── GPS/locate button (top-left, beside panel) ─────────── */
+#locate-btn {
+  position: absolute;
+  top: 12px;
+  left: 352px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #0F172A;
+  color: #E2E8F0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+#locate-btn:hover {
+  background: #1E293B;
+}
+
+#locate-btn:active {
+  transform: scale(0.95);
+}
+
+#locate-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #2563EB;
+}
+
+#locate-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ─── Top-left toolbar (theme toggle) — below zoom controls ── */
+#toolbar {
+  position: absolute;
+  top: 165px;
+  left: 352px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+}
+
+#theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #0F172A;
+  color: #E2E8F0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+#theme-btn:hover {
+  background: #1E293B;
+}
+
+#theme-btn:active {
+  transform: scale(0.98);
+}
+
+#theme-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #2563EB;
+}
+
+#theme-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ─── Basemap picker (below theme toggle) ─────────────────── */
+#basemap-gallery {
+  position: absolute;
+  top: 209px;
+  bottom: auto;
+  left: 352px;
+  z-index: 5;
+}
+
+#basemap-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #0F172A;
+  color: #E2E8F0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+#basemap-btn:hover {
+  background: #1E293B;
+}
+
+#basemap-btn:active {
+  transform: scale(0.98);
+}
+
+#basemap-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #2563EB;
+}
+
+#basemap-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+#basemap-dropdown {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  z-index: 30;
+  display: none;
+  min-width: 160px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  padding: 6px;
+  overflow: hidden;
+}
+
+#basemap-dropdown.open {
+  display: block;
+}
+
+.basemap-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #334155;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+  text-align: left;
+}
+
+.basemap-item:hover {
+  background: #F1F5F9;
+}
+
+.basemap-item.active {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1D4ED8;
+  font-weight: 600;
+}
+
+.basemap-item .swatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  flex-shrink: 0;
+}
+
+.basemap-item .label {
+  flex: 1;
+}
+
+.basemap-item .check {
+  font-size: 11px;
+  opacity: 0;
+}
+
+.basemap-item.active .check {
+  opacity: 1;
+}
+
+body.light #basemap-btn {
+  background: #FFFFFF;
+  border-color: #E0E0E0;
+  color: #333333;
+}
+
+/* Dark theme basemap dropdown */
+body:not(.light) #basemap-dropdown {
+  background: #0F172A;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(2, 8, 23, 0.5);
+}
+
+body:not(.light) .basemap-item {
+  color: #E2E8F0;
+}
+
+body:not(.light) .basemap-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:not(.light) .basemap-item.active {
+  background: rgba(37, 99, 235, 0.2);
+  color: #93C5FD;
+}
+
+body:not(.light) .basemap-item .swatch {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Kebab menu button (left of search bar) ─────────────── */
+#menu-btn {
+  position: absolute;
+  top: 12px;
+  right: calc(340px + 12px + 8px);
+  left: auto;
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #E2E8F0;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+#menu-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+#menu-btn:active {
+  transform: scale(0.98);
+}
+
+#menu-btn.open {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93C5FD;
+}
+
+/* ─── Menu dropdown panel (below kebab, aligned left) ─────── */
+#menu-panel {
+  position: absolute;
+  top: 56px;
+  right: calc(340px + 12px + 8px);
+  left: auto;
+  z-index: 40;
+  width: 240px;
+  background: #0F172A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(2, 8, 23, 0.5);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#menu-panel[hidden] {
+  display: none;
+}
+
+.menu-header {
+  font-size: 14px;
+  font-weight: 700;
+  color: #F8FAFC;
+  padding: 8px 10px 6px;
+  letter-spacing: 0.02em;
+}
+
+.menu-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748B;
+  padding: 8px 10px 4px;
+}
+
+.menu-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 6px 4px;
+}
+
+/* ─── Mode rows (full-width buttons inside the panel) ─────── */
+#menu-panel .mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+#menu-panel .mode-btn:hover {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+#menu-panel .mode-btn:active {
+  transform: scale(0.98);
+}
+
+#menu-panel .mode-btn.active {
+  background: rgba(37,99,235,0.15);
+  border-color: rgba(37,99,235,0.4);
+  color: #2563EB;
+  font-weight: 600;
+}
+
+#menu-panel .mode-btn .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+}
+
+#menu-panel .mode-btn .icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ─── Basemap row ─────────────────────────────────────────── */
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.menu-row-label {
+  font-size: 13px;
+  color: #CBD5E1;
+}
+
+#basemap-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #0F172A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 6px 26px 6px 10px;
+  font-size: 12px;
+  color: #F8FAFC;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+#basemap-select:hover {
+  border-color: #475569;
+}
+
+#basemap-select:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Light theme — shell elements only
+   ═══════════════════════════════════════════════════════════ */
+body.light {
+  background: #F1F5F9;
+  color: #1E293B;
+}
+
+body.light #locate-btn {
+  background: #FFFFFF;
+  border-color: #E0E0E0;
+  color: #333333;
+}
+
+body.light #locate-btn:hover {
+  background: #F5F5F5;
+}
+
+body.light #theme-btn {
+  background: #FFFFFF;
+  border-color: #E0E0E0;
+  color: #333333;
+}
+
+body.light #theme-btn:hover {
+  background: #F5F5F5;
+}
+
+body.light #menu-btn {
+  background: transparent;
+  color: #334155;
+}
+
+body.light #menu-btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+body.light #menu-btn.open {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1D4ED8;
+}
+
+body.light #menu-panel {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  box-shadow: 0 8px 32px rgba(15,23,42,0.12);
+}
+
+body.light .menu-header {
+  color: #0F172A;
+}
+
+body.light .menu-section-label {
+  color: #94A3B8;
+}
+
+body.light .menu-divider {
+  background: #E2E8F0;
+}
+
+body.light #menu-panel .mode-btn {
+  color: #64748B;
+}
+
+body.light #menu-panel .mode-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+body.light #menu-panel .mode-btn.active {
+  background: rgba(37,99,235,0.12);
+  border-color: rgba(37,99,235,0.4);
+  color: #2563EB;
+}
+
+body.light .menu-row-label {
+  color: #475569;
+}
+
+body.light #basemap-select {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #0F172A;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+body.light #basemap-select:hover {
+  border-color: #CBD5E1;
+}
+
+body.light #basemap-select:focus {
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+}
+
+/* Option elements inherit browser default colors unless set */
+#basemap-select option {
+  background: #0F172A;
+  color: #F8FAFC;
+}
+body.light #basemap-select option {
+  background: #FFFFFF;
+  color: #0F172A;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  #locate-btn {
+    top: 8px;
+    left: 8px;
+    width: 44px;
+    height: 44px;
+  }
+
+  #toolbar {
+    top: 60px;
+    left: 8px;
+  }
+
+  #theme-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  #menu-btn {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    width: 46px;
+    height: 46px;
+  }
+
+  #menu-panel {
+    top: 60px;
+    right: 8px;
+    left: auto;
+    width: 240px;
+  }
+}

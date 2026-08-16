@@ -1,0 +1,415 @@
+/* ═══════════════════════════════════════════════════════════
+   LintasPeta Design Tokens
+   Foundation for all visual styling - colors, typography, spacing, shadows
+   Based on ui-ux-pro-max Data-Dense Dashboard pattern
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Color Palette ──────────────────────────────────────── */
+  /* Primary (Blue) - Navigation, headers, primary actions */
+  --color-primary-50: #EFF6FF;
+  --color-primary-100: #DBEAFE;
+  --color-primary-200: #BFDBFE;
+  --color-primary-300: #93C5FD;
+  --color-primary-400: #60A5FA;
+  --color-primary-500: #3B82F6;
+  --color-primary-600: #2563EB;
+  --color-primary-700: #1D4ED8;
+  --color-primary-800: #1E40AF;
+  --color-primary-900: #1E3A8A;
+
+  /* Neutral (Slate) - Text, backgrounds, borders */
+  --color-neutral-50: #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1E293B;
+  --color-neutral-900: #0F172A;
+
+  /* Semantic Colors */
+  --color-success: #22C55E;
+  --color-success-light: #DCFCE7;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FEF3C7;
+  --color-error: #EF4444;
+  --color-error-light: #FEE2E2;
+  --color-info: #3B82F6;
+  --color-info-light: #DBEAFE;
+
+  /* Accent (Amber) - CTAs, highlights, badges */
+  --color-accent-500: #D97706;
+  --color-accent-600: #B45309;
+
+  /* UPTD Colors */
+  --color-uptd-1: #E11D48;
+  --color-uptd-2: #2563EB;
+  --color-uptd-3: #059669;
+  --color-uptd-4: #7C3AED;
+  --color-uptd-default: #6B7280;
+
+  /* ─── Typography ─────────────────────────────────────────── */
+  --font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'Fira Sans', monospace;
+
+  --text-xs: 0.6875rem;    /* 11px */
+  --text-sm: 0.75rem;      /* 12px */
+  --text-base: 0.875rem;   /* 14px */
+  --text-lg: 1rem;         /* 16px */
+  --text-xl: 1.125rem;     /* 18px */
+  --text-2xl: 1.25rem;     /* 20px */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.08em;
+
+  /* ─── Spacing ────────────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+
+  /* ─── Border Radius ──────────────────────────────────────── */
+  --radius-sm: 0.375rem;   /* 6px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-full: 9999px;
+
+  /* ─── Shadows ────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.16);
+  --shadow-xl: 0 12px 32px rgba(15, 23, 42, 0.2);
+
+  /* ─── Transitions ────────────────────────────────────────── */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 250ms ease;
+  --transition-spring: 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ─── Z-Index Scale ──────────────────────────────────────── */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+
+  /* ─── Touch Targets ──────────────────────────────────────── */
+  --touch-min: 44px;  /* iOS minimum */
+  --touch-android: 48px;  /* Android minimum */
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Dark Theme (Default)
+   ═══════════════════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  --bg-primary: var(--color-neutral-900);
+  --bg-secondary: var(--color-neutral-800);
+  --bg-tertiary: var(--color-neutral-700);
+  --bg-elevated: var(--color-neutral-800);
+  --bg-surface: var(--color-neutral-900);
+
+  --text-primary: var(--color-neutral-50);
+  --text-secondary: var(--color-neutral-400);
+  --text-muted: var(--color-neutral-500);
+  --text-inverse: var(--color-neutral-900);
+
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-focus: var(--color-primary-600);
+
+  --surface-overlay: rgba(15, 23, 42, 0.85);
+  --surface-scrim: rgba(15, 23, 42, 0.92);
+
+  --accent-primary: var(--color-primary-600);
+  --accent-hover: var(--color-primary-500);
+
+  /* Component-specific tokens */
+  --panel-bg: var(--color-neutral-800);
+  --panel-header-bg: var(--color-neutral-900);
+  --panel-border: var(--border-default);
+
+  --card-bg: var(--color-neutral-900);
+  --card-border: var(--border-default);
+
+  --input-bg: var(--color-neutral-900);
+  --input-border: var(--border-default);
+
+  --button-primary-bg: var(--color-primary-600);
+  --button-primary-text: var(--color-neutral-50);
+  --button-secondary-bg: var(--color-neutral-700);
+  --button-secondary-text: var(--color-neutral-300);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Light Theme
+   ═══════════════════════════════════════════════════════════ */
+body.light,
+[data-theme="light"] {
+  --bg-primary: var(--color-neutral-100);
+  --bg-secondary: var(--color-neutral-50);
+  --bg-tertiary: var(--color-neutral-200);
+  --bg-elevated: #FFFFFF;
+  --bg-surface: var(--color-neutral-100);
+
+  --text-primary: var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-500);
+  --text-muted: var(--color-neutral-400);
+  --text-inverse: var(--color-neutral-50);
+
+  --border-default: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+  --border-focus: var(--color-primary-600);
+
+  --surface-overlay: rgba(241, 245, 249, 0.95);
+  --surface-scrim: rgba(241, 245, 249, 0.92);
+
+  --accent-primary: var(--color-primary-600);
+  --accent-hover: var(--color-primary-700);
+
+  /* Component-specific tokens */
+  --panel-bg: #FFFFFF;
+  --panel-header-bg: var(--color-neutral-50);
+  --panel-border: var(--color-neutral-200);
+
+  --card-bg: var(--color-neutral-50);
+  --card-border: var(--color-neutral-200);
+
+  --input-bg: var(--color-neutral-50);
+  --input-border: var(--color-neutral-200);
+
+  --button-primary-bg: var(--color-primary-600);
+  --button-primary-text: #FFFFFF;
+  --button-secondary-bg: var(--color-neutral-100);
+  --button-secondary-text: var(--color-neutral-700);
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --shadow-xl: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Accessibility: Reduced Motion
+   ═══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-base: 0ms;
+    --transition-slow: 0ms;
+    --transition-spring: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Base Component Styles (using tokens)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Focus Visible - Accessible focus states */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Button base */
+button,
+.btn {
+  font-family: var(--font-family);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+button:active,
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* Panel */
+.panel {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.panel-header {
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--panel-border);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.panel-header h1 {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.panel-body {
+  padding: var(--space-3) var(--space-4);
+  overflow-y: auto;
+}
+
+/* Card */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-full);
+  background: var(--accent-primary);
+  color: var(--button-primary-text);
+}
+
+/* Section */
+.section {
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-widest);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Input */
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--text-sm);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Filter Button */
+.filter-btn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
+}
+
+.filter-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  background: var(--button-primary-bg);
+  border-color: var(--accent-primary);
+  color: var(--button-primary-text);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--color-neutral-600);
+  border-radius: var(--radius-full);
+  transition: var(--transition-base);
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-full);
+  transition: var(--transition-base);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--accent-primary);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+}
