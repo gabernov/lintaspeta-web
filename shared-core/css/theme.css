@@ -1206,13 +1206,25 @@ body.light .skel-row::after {
      Collapsed = shifted down so only the grab handle + header show. */
   #sheet-handle {
     display: flex; align-items: flex-start; justify-content: center;
-    height: 20px; padding-top: 8px; box-sizing: border-box;
+    height: 30px; padding-top: 12px; box-sizing: border-box;
     flex-shrink: 0;
+    cursor: grab;
     touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #sheet-handle.dragging,
+  #sheet-handle:active {
+    cursor: grabbing;
   }
   #sheet-handle::before {
-    content: ""; width: 36px; height: 4px; border-radius: 2px;
+    content: ""; width: 40px; height: 5px; border-radius: 3px;
     background: #475569; margin: 0;
+    transition: background 150ms ease, width 150ms ease;
+  }
+  #sheet-handle.dragging::before,
+  #sheet-handle:active::before {
+    background: #94A3B8;
+    width: 52px;
   }
   #panel {
     position: fixed; top: auto; left: 0; right: 0; bottom: 0;

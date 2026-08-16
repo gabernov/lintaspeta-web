@@ -419,23 +419,6 @@
 @media (max-width: 600px) {
   .panel-toggle-btn { display: flex; }
 
-  #sheet-handle {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    height: 20px;
-    padding-top: 8px;
-    touch-action: none;
-    user-select: none;
-  }
-  #sheet-handle::before {
-    content: "";
-    width: 36px;
-    height: 4px;
-    border-radius: 999px;
-    background: var(--text-muted);
-  }
-
   #panel {
     position: fixed;
     top: auto;

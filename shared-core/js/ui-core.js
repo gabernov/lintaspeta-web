@@ -358,6 +358,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
     dragging = { startY, wasCollapsed: panel.classList.contains("collapsed") };
     panel.style.transition = "none";
     document.body.style.touchAction = "none";
+    if (handle) handle.classList.add("dragging");
   };
   const onDragMove = (clientY) => {
     if (!dragging) return;
@@ -372,6 +373,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
     const { wasCollapsed } = dragging;
     dragging = null;
     document.body.style.touchAction = "";
+    if (handle) handle.classList.remove("dragging");
     // Snap: open if dragged more than half the collapsed offset upward.
     const threshold = Math.round(panel.offsetHeight * collapsedOffset() / 100 / 2);
     const currentY = parseFloat(panel.style.transform.match(/translateY\(([-\d.]+)px\)/)?.[1] || "0");
