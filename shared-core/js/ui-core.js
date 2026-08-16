@@ -347,6 +347,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
 
   // Drag state (shared by pointer + touch events)
   let dragging = null;
+  let lastDragEnd = 0; // timestamp to suppress the click that follows a drag
 
   const collapsedOffset = () => {
     const collapsedH = (handle?.offsetHeight || 0) + (header?.offsetHeight || 0);
@@ -372,6 +373,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
     if (!dragging) return;
     const { wasCollapsed } = dragging;
     dragging = null;
+    lastDragEnd = Date.now();
     document.body.style.touchAction = "";
     if (handle) handle.classList.remove("dragging");
     // Snap: open if dragged more than half the collapsed offset upward.
@@ -383,6 +385,10 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
   };
 
   const onPointerDown = (e) => {
+    // On touch screens both pointer and touch events fire for one
+    // gesture; let the touch handler own touch drags to avoid double
+    // state. Pointer (mouse) drags still work unchanged.
+    if (e.pointerType === "touch") return;
     if (e.target.closest("button")) return;
     onDragStart(e.clientY);
     const move = (ev) => onDragMove(ev.clientY);
@@ -397,19 +403,28 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
 
   const onTouchStart = (e) => {
     if (e.target.closest("button")) return;
+    if (e.touches.length !== 1) return;
     onDragStart(e.touches[0].clientY);
-    const move = (ev) => { ev.preventDefault(); onDragMove(ev.touches[0].clientY); };
+    const move = (ev) => {
+      if (!dragging) return;
+      ev.preventDefault();
+      onDragMove(ev.touches[0].clientY);
+    };
     const up = () => {
       document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", up);
+      document.removeEventListener("touchcancel", up);
       onDragEnd();
     };
     document.addEventListener("touchmove", move, { passive: false });
     document.addEventListener("touchend", up);
+    document.addEventListener("touchcancel", up);
   };
 
   const onHeaderClick = (e) => {
     if (e.target.closest("button")) return;
+    // A click fires right after a drag gesture — don't toggle then.
+    if (Date.now() - lastDragEnd < 400) return;
     toggleOpen();
   };
 
@@ -417,6 +432,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
   if (header) {
     header.addEventListener("click", onHeaderClick);
     header.addEventListener("pointerdown", onPointerDown);
+    header.addEventListener("touchstart", onTouchStart, { passive: false });
   }
   if (handle) {
     handle.addEventListener("pointerdown", onPointerDown);
@@ -431,6 +447,7 @@ export function initBottomSheet({ panel, handle, toggle, header }) {
     if (header) {
       header.removeEventListener("click", onHeaderClick);
       header.removeEventListener("pointerdown", onPointerDown);
+      header.removeEventListener("touchstart", onTouchStart);
     }
     if (handle) {
       handle.removeEventListener("pointerdown", onPointerDown);

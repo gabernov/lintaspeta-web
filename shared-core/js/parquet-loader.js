@@ -7,7 +7,6 @@ export async function initParquet() {
 
   try {
     arrow = await import("https://esm.sh/apache-arrow");
-    console.log("Arrow loaded");
   } catch (e) {
     console.error("Failed to load Apache Arrow: " + e.message);
     throw e;
@@ -15,7 +14,6 @@ export async function initParquet() {
 
   try {
     parquet = await import("https://cdn.jsdelivr.net/npm/parquet-wasm@0.7.0/esm/parquet_wasm.js");
-    console.log("parquet-wasm module loaded, exports:", Object.keys(parquet));
   } catch (e) {
     console.error("Failed to load parquet-wasm: " + e.message);
     throw e;
@@ -24,7 +22,6 @@ export async function initParquet() {
   try {
     // Exactly like geoparquet-visualizer: await parquet.default()
     await parquet.default();
-    console.log("parquet-wasm initialized via parquet.default()");
   } catch (e) {
     // Fallback: try initSync with explicit WASM compilation
     console.warn("parquet.default() failed, trying initSync fallback:", e.message);
@@ -33,7 +30,6 @@ export async function initParquet() {
       const wasmBytes = await wasmResp.arrayBuffer();
       const wasmModule = await WebAssembly.compile(wasmBytes);
       parquet.initSync(wasmModule);
-      console.log("parquet-wasm initialized via initSync()");
     } catch (e2) {
       console.error("Failed to init WASM: " + e.message + " | " + e2.message);
       throw e2;
@@ -131,8 +127,6 @@ export async function loadParquetToGeoJSON(source, onProgress) {
     file = new File([blob], sourceName);
   }
 
-  console.log(`[loadParquet] ${sourceName}: ${file.size} bytes`);
-
   // Use the streaming API — exactly like geoparquet-visualizer
   const parquetFile = await parquet.ParquetFile.fromFile(file);
   const recordBatchStream = await parquetFile.stream();
@@ -172,7 +166,6 @@ export async function loadParquetToGeoJSON(source, onProgress) {
           }
         }
       }
-      console.log(`[loadParquet] Detected geometry column: ${geometryColumnName}`);
     }
 
     for (const rowObject of rowArray) {
@@ -233,9 +226,7 @@ export async function loadParquetToGeoJSON(source, onProgress) {
 
     batchCount++;
     if (onProgress) onProgress(batchCount, totalProcessed);
-    console.log(`[loadParquet] Batch ${batchCount}: ${totalProcessed} features so far`);
   }
 
-  console.log(`[loadParquet] Done: ${features.length} features in ${batchCount} batches`);
   return { type: "FeatureCollection", features };
 }

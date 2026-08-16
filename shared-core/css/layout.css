@@ -58,7 +58,6 @@ body {
   pointer-events: none;
   user-select: none;
 }
-
 #brand-mark text {
   /* Dark fill, white outline, drawn OUTWARD via paint-order. */
   fill: #0F172A;
@@ -612,5 +611,12 @@ body.light #basemap-select option {
     right: 8px;
     left: auto;
     width: 240px;
+  }
+
+  /* Watermark: lift it above the collapsed bottom-sheet header
+     (handle 30px + header ~56px + breathing room) so the sheet never
+     covers the logo, and keep it behind the panel (z 5 < 10). */
+  #brand-mark {
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
