@@ -63,6 +63,11 @@ export const Registry = {
     if (this.ctx?.ui?.Loading?.show) {
       this.ctx.ui.Loading.show(`Memuat ${mode.title || id}…`);
     }
+    // Show the panel skeleton right away so the info area never goes
+    // blank while the old panel is torn down and the new one is built.
+    if (this.ctx?.ui?.PanelSkeleton?.show) {
+      this.ctx.ui.PanelSkeleton.show();
+    }
     if (this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
       await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
@@ -143,6 +148,9 @@ export const Registry = {
   _hideLoading() {
     if (this.ctx?.ui?.Loading?.hide) {
       this.ctx.ui.Loading.hide();
+    }
+    if (this.ctx?.ui?.PanelSkeleton?.hide) {
+      this.ctx.ui.PanelSkeleton.hide();
     }
   },
 

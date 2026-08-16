@@ -129,7 +129,7 @@
 <script type="module">
   import { Registry, setPostInitFn } from "./shared-core/js/registry.js";
   import { initMap, addStarfield, setBasemap, flyToGlobe, layoutTopLeftControls, waitForMapReady } from "./shared-core/js/map-core.js";
-  import { toast, Loading, registerSearch } from "./shared-core/js/ui-core.js";
+  import { toast, Loading, PanelSkeleton, registerSearch } from "./shared-core/js/ui-core.js";
 
   const $ = id => document.getElementById(id);
 
@@ -187,7 +187,7 @@
 
   Registry.ctx = {
     map,
-    ui: { toast, Loading },
+    ui: { toast, Loading, PanelSkeleton },
     search: { registerSearch },
     flyToGlobe,
     getBasemapStyle: () => currentBasemap,
@@ -199,6 +199,12 @@
   };
 
   setPostInitFn(async (map) => {
+    // Snap the control column to the panel's edge BEFORE the slower
+    // starfield re-add, so buttons never overlap the panel while the
+    // basemap reloads. (layoutTopLeftControls reads #panel's rect; if
+    // it were called only after addStarfield, buttons would sit at
+    // left:12 over the panel for seconds during style switches.)
+    layoutTopLeftControls();
     await addStarfield(map);
     layoutTopLeftControls();
   });

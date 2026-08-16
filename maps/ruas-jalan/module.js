@@ -710,7 +710,10 @@ function createDOM() {
       </section>
     </div>
   `;
-  mapContainer.appendChild(panel);
+  // Mount the panel on <body>, NOT inside #map: #map has its own
+  // stacking context (z-index:1) which would trap the panel's z-index
+  // below the shell buttons. On body the panel's z-index (10) wins.
+  document.body.appendChild(panel);
 
   panelHeader = document.getElementById("panel-header");
   panelBody = document.getElementById("panel-body");

@@ -22,6 +22,43 @@ export const Loading = {
   }
 };
 
+/* ─── Panel skeleton — placeholder for the info panel ─────────
+   Keeps the info area visually occupied while a mode's data loads,
+   so switching modes never flashes an empty region. Mounted once on
+   <body> (like #panel) so it shares the same stacking context. */
+let skeletonEl = null;
+let skeletonCount = 0;
+
+export const PanelSkeleton = {
+  show() {
+    if (!skeletonEl) {
+      skeletonEl = document.createElement("div");
+      skeletonEl.id = "panel-skeleton";
+      skeletonEl.setAttribute("aria-hidden", "true");
+      skeletonEl.innerHTML = `
+        <div class="skel-row skel-row--title"></div>
+        <div class="skel-stats">
+          <div class="skel-row skel-row--stat"></div>
+          <div class="skel-row skel-row--stat"></div>
+          <div class="skel-row skel-row--stat"></div>
+        </div>
+        <div class="skel-row"></div>
+        <div class="skel-row"></div>
+        <div class="skel-row skel-row--short"></div>
+      `;
+      document.body.appendChild(skeletonEl);
+    }
+    skeletonCount++;
+    skeletonEl.classList.add("visible");
+  },
+  hide() {
+    skeletonCount = Math.max(0, skeletonCount - 1);
+    if (skeletonCount === 0 && skeletonEl) {
+      skeletonEl.classList.remove("visible");
+    }
+  }
+};
+
 export function escHtml(s) {
   const d = document.createElement("div");
   d.textContent = s || "";

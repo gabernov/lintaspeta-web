@@ -1080,6 +1080,58 @@ body.light #panel-toggle:hover { background: #F1F5F9; }
 /* Bottom-sheet grab handle — only shown on small screens */
 #sheet-handle { display: none; }
 
+/* ═══ Panel skeleton — shown while a mode's data is loading ═══ */
+/* Placeholder that mirrors #panel's geometry so the info area never
+   goes blank during mode switches. Hidden by default; JS toggles
+   .visible on #panel-skeleton. */
+#panel-skeleton {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  width: 340px;
+  max-height: calc(100vh - 80px);
+  background: #0F172A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  display: none;
+  flex-direction: column; gap: 14px;
+  overflow: hidden;
+}
+#panel-skeleton.visible { display: flex; }
+body.light #panel-skeleton {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+}
+
+.skel-row {
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.07);
+  position: relative;
+  overflow: hidden;
+}
+body.light .skel-row { background: rgba(15,23,42,0.08); }
+.skel-row--title { height: 22px; width: 55%; }
+.skel-row--short { width: 40%; }
+.skel-row--stat {
+  height: 64px; width: 31%;
+  border-radius: 10px;
+}
+.skel-stats { display: flex; gap: 8px; }
+/* Shimmer sweep */
+.skel-row::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: translateX(-100%);
+  animation: skel-shimmer 1.4s ease infinite;
+}
+body.light .skel-row::after {
+  background: linear-gradient(90deg, transparent, rgba(15,23,42,0.06), transparent);
+}
+@keyframes skel-shimmer {
+  100% { transform: translateX(100%); }
+}
+
 /* ═══ MOBILE: portrait phones (≤600px) ═══ */
 /* Layout: full-width search on top, panel becomes a collapsible bottom
    sheet, legend + basemap + map controls stay out of the way, and
@@ -1133,6 +1185,13 @@ body.light #panel-toggle:hover { background: #F1F5F9; }
     box-shadow: 0 -4px 24px rgba(2, 8, 23, 0.4);
     will-change: transform;
     transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* Mobile skeleton mirrors the bottom-sheet panel shape */
+  #panel-skeleton {
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0;
+    width: 100%; max-height: 50vh; max-height: 50dvh;
+    border-radius: 14px 14px 0 0;
+    padding: 20px 16px;
   }
   #panel-header {
     flex-wrap: nowrap; height: 54px; padding: 0 14px;
