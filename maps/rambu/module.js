@@ -588,9 +588,36 @@ export const module = {
     const ruasUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
 
     const [jaringanResult, rambuResult, ruasResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(jaringanUrl, () => Loading.heartbeat?.()),
-      loadParquetToGeoJSON(rambuUrl, () => Loading.heartbeat?.()),
-      loadParquetToGeoJSON(ruasUrl, () => Loading.heartbeat?.())
+      loadParquetToGeoJSON(
+        jaringanUrl,
+        () => Loading.heartbeat?.(),
+        (received, total) => {
+          Loading.heartbeat?.();
+          const pct = total ? Math.round((received / total) * 100) : 0;
+          const st = document.getElementById("load-status");
+          if (st) st.textContent = `Mengunduh data jaringan… ${pct}%`;
+        }
+      ),
+      loadParquetToGeoJSON(
+        rambuUrl,
+        () => Loading.heartbeat?.(),
+        (received, total) => {
+          Loading.heartbeat?.();
+          const pct = total ? Math.round((received / total) * 100) : 0;
+          const st = document.getElementById("load-status");
+          if (st) st.textContent = `Mengunduh data rambu… ${pct}%`;
+        }
+      ),
+      loadParquetToGeoJSON(
+        ruasUrl,
+        () => Loading.heartbeat?.(),
+        (received, total) => {
+          Loading.heartbeat?.();
+          const pct = total ? Math.round((received / total) * 100) : 0;
+          const st = document.getElementById("load-status");
+          if (st) st.textContent = `Mengunduh data ruas… ${pct}%`;
+        }
+      )
     ]);
 
     if (jaringanResult.status === "fulfilled") {

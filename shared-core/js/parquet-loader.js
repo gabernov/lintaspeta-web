@@ -113,17 +113,30 @@ function parseWKB(wkbBuffer) {
 // ═══════════════════════════════════════════════════════════
 // PARQUET → GEOJSON (streaming, like geoparquet-visualizer)
 // ═══════════════════════════════════════════════════════════
-export async function loadParquetToGeoJSON(source, onProgress) {
+export async function loadParquetToGeoJSON(source, onProgress, onDownloadProgress) {
   const sourceName = source instanceof File ? source.name : source;
   let file;
 
   if (source instanceof File) {
     file = source;
   } else {
-    // Fetch the file from URL
+    // Stream the download so the caller can report live progress —
+    // on slow connections a multi-MB parquet would otherwise sit in a
+    // silent fetch (the watchdog would see no heartbeat at all).
     const resp = await fetch(source);
     if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${source}`);
-    const blob = await resp.blob();
+    const total = Number(resp.headers.get("Content-Length")) || 0;
+    const reader = resp.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.byteLength;
+      if (onDownloadProgress) onDownloadProgress(received, total);
+    }
+    const blob = new Blob(chunks, { type: resp.headers.get("Content-Type") || "application/octet-stream" });
     file = new File([blob], sourceName);
   }
 

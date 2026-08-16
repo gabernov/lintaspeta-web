@@ -1015,7 +1015,16 @@ export const module = {
     Loading.setStage?.(30000, 90000);
     await initParquet();
     const dataUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
-    roadsGeoJSON = await loadParquetToGeoJSON(dataUrl, () => Loading.heartbeat?.());
+    roadsGeoJSON = await loadParquetToGeoJSON(
+      dataUrl,
+      () => Loading.heartbeat?.(),
+      (received, total) => {
+        Loading.heartbeat?.();
+        const pct = total ? Math.round((received / total) * 100) : 0;
+        const st = document.getElementById("load-status");
+        if (st) st.textContent = `Mengunduh data jalan… ${pct}%`;
+      }
+    );
     Loading.hide();
 
     createDOM();

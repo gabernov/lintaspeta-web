@@ -919,8 +919,26 @@ export const module = {
     const schoolsUrl = new URL('data/sekolah_merged.parquet', import.meta.url);
 
     const [roadsResult, schoolsResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(roadsUrl, () => Loading.heartbeat?.()),
-      loadParquetToGeoJSON(schoolsUrl, () => Loading.heartbeat?.())
+      loadParquetToGeoJSON(
+        roadsUrl,
+        () => Loading.heartbeat?.(),
+        (received, total) => {
+          Loading.heartbeat?.();
+          const pct = total ? Math.round((received / total) * 100) : 0;
+          const st = document.getElementById("load-status");
+          if (st) st.textContent = `Mengunduh data jalan… ${pct}%`;
+        }
+      ),
+      loadParquetToGeoJSON(
+        schoolsUrl,
+        () => Loading.heartbeat?.(),
+        (received, total) => {
+          Loading.heartbeat?.();
+          const pct = total ? Math.round((received / total) * 100) : 0;
+          const st = document.getElementById("load-status");
+          if (st) st.textContent = `Mengunduh data sekolah… ${pct}%`;
+        }
+      )
     ]);
 
     if (roadsResult.status === "fulfilled") {
