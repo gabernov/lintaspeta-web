@@ -25,12 +25,31 @@ export const Loading = {
 /* ─── Panel skeleton — placeholder for the info panel ─────────
    Keeps the info area visually occupied while a mode's data loads,
    so switching modes never flashes an empty region. Mounted once on
-   <body> (like #panel) so it shares the same stacking context. */
+   <body> (like #panel) so it shares the same stacking context.
+
+   Visibility is derived from the REAL panel, not from timing/events:
+   a MutationObserver watches <body> and the skeleton shows only while
+   #panel is ABSENT from the DOM. This is race-free — whenever a mode
+   mounts its panel the skeleton disappears immediately, and it cannot
+   linger past a mode switch or overlap the real panel. */
 let skeletonEl = null;
-let skeletonCount = 0;
+let skeletonActive = false;
+
+function syncSkeleton() {
+  if (!skeletonEl) return;
+  const panelExists = !!document.getElementById("panel");
+  skeletonEl.classList.toggle("visible", skeletonActive && !panelExists);
+}
+
+// Watch for #panel appearing/disappearing; re-evaluate skeleton each time.
+new MutationObserver(syncSkeleton).observe(document.body, {
+  childList: true,
+  subtree: true,
+});
 
 export const PanelSkeleton = {
   show() {
+    skeletonActive = true;
     if (!skeletonEl) {
       skeletonEl = document.createElement("div");
       skeletonEl.id = "panel-skeleton";
@@ -48,14 +67,11 @@ export const PanelSkeleton = {
       `;
       document.body.appendChild(skeletonEl);
     }
-    skeletonCount++;
-    skeletonEl.classList.add("visible");
+    syncSkeleton();
   },
   hide() {
-    skeletonCount = Math.max(0, skeletonCount - 1);
-    if (skeletonCount === 0 && skeletonEl) {
-      skeletonEl.classList.remove("visible");
-    }
+    skeletonActive = false;
+    syncSkeleton();
   }
 };
 

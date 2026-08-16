@@ -684,8 +684,6 @@ function createDOM() {
   // stacking context (z-index:1) which would trap the panel's z-index
   // below the shell buttons. On body the panel's z-index (10) wins.
   document.body.appendChild(panel);
-  // The real panel is now in place — tell the shell to drop the skeleton.
-  document.dispatchEvent(new CustomEvent("panel-mounted"));
 
   panelHeader = document.getElementById("panel-header");
   panelBody = document.getElementById("panel-body");

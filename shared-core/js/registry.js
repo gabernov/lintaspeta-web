@@ -134,16 +134,6 @@ export const Registry = {
         this._hideLoading();
         return;
       }
-      // When a module mounts its real panel it fires "panel-mounted".
-      // Drop the skeleton as soon as that happens (the panel is in the
-      // DOM and covers the placeholder area), instead of waiting for the
-      // full init (parquet load + layer adds) to finish.
-      if (!this._onPanelMounted) {
-        this._onPanelMounted = () => {
-          this.ctx?.ui?.PanelSkeleton?.hide();
-        };
-        document.addEventListener("panel-mounted", this._onPanelMounted);
-      }
       try {
         await module.init({ map, data: null, config, ui, search });
         this._loaded = { module, config };
