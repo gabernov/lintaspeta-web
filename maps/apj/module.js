@@ -1,13 +1,13 @@
-﻿import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
+import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { showPopup, closePopup } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config, { UPTD_COLORS, KONDISI_COLORS, UPTD_DEFAULT } from "./config.js";
 
 export { config };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // STATE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 let map = null;
 let pjuGeoJSON = null;
 let ruasGeoJSON = null;
@@ -31,9 +31,9 @@ let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
 // Kondisi multi-toggle state (toggled via the stats bars)
 let activeKondisi = new Set(["Baik", "Rusak Ringan", "Rusak Berat", "Mati"]);
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // HANDLER REFS (for teardown)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 let styleLoadHandler = null;
 let basemapChangedHandler = null;
 let pjuHitboxClickHandler = null;
@@ -43,9 +43,9 @@ let chipHandlers = [];       // [{ el, h }]
 let singleHandlers = [];     // [{ el, h }]
 let sectionHandlers = [];
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // FILTERS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 function matchesFeature(ft) {
   const p = ft.properties;
   if (!p) return false;
@@ -108,9 +108,9 @@ function applyFilters() {
   renderChips();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// STATS â€” hero + condition bars + UPTD bars (all in one section)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
+// STATS — hero + condition bars + UPTD bars (all in one section)
+// ═══════════════════════════════════════════════════════════
 function updateStats() {
   if (!pjuGeoJSON) return;
   const feats = pjuGeoJSON.features.filter(matchesFeature);
@@ -147,7 +147,7 @@ function updateStats() {
     }).join("");
   }
   // UPTD distribution bars double as toggle buttons (click to hide/show
-  // that UPTD). APJ-only class names â€” never touches shared components.
+  // that UPTD). APJ-only class names — never touches shared components.
   if (uptdBarsEl) {
     const counts = {};
     for (const f of feats) counts[f.properties?.UPTD] = (counts[f.properties?.UPTD] || 0) + 1;
@@ -180,18 +180,18 @@ function renderChips() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // POPUP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 function showPjuPopup(feature) {
   const coords = feature.geometry?.coordinates;
   if (!coords) return;
   showPopup(map, coords, config.popup(feature), { maxWidth: "320px" });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // DOM CREATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 function buildFilterOptions(key) {
   if (!pjuGeoJSON) return [];
   const vals = new Set();
@@ -252,7 +252,7 @@ function createDOM() {
 
       <section class="panel-section" aria-label="Filter data">
         <div class="section-header" data-collapse="filter">
-          <span class="section-chevron" aria-hidden="true">â–¸</span>
+          <span class="section-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></span>
           <h2 class="section-title">Filter Data</h2>
         </div>
         <div class="section-content" data-collapse-target="filter">
@@ -283,11 +283,16 @@ function createDOM() {
   // Collapsible sections
   panel.querySelectorAll(".section-header[data-collapse]").forEach((header) => {
     const target = panel.querySelector(`.section-content[data-collapse-target="${header.dataset.collapse}"]`);
+    const section = header.closest(".panel-section");
     if (!target) return;
+    // Sections start open — reflect that in the class so the chevron
+    // points correctly from the start.
+    section.classList.add("open");
     const toggle = () => {
       const open = target.style.display !== "none";
       target.style.display = open ? "none" : "";
       header.classList.toggle("open", !open);
+      if (section) section.classList.toggle("open", !open);
     };
     header.addEventListener("click", toggle);
     sectionHandlers.push({ header, toggle });
@@ -370,9 +375,9 @@ function removeDOM() {
   singleEls = {};
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // LAYER ADD / RE-ADD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 function addLayers() {
   if (!map) return;
   if (ruasGeoJSON && !map.getSource("apj-roads")) {
@@ -418,9 +423,9 @@ function fitBounds() {
   if (added) map.fitBounds(bounds, { padding: 40, duration: 800, maxZoom: 12 });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 export const module = {
   async init(ctx) {
     map = ctx.map;
@@ -440,7 +445,7 @@ export const module = {
           Loading.heartbeat?.();
           const pct = total ? Math.round((received / total) * 100) : 0;
           const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data APJâ€¦ ${pct}%`;
+          if (st) st.textContent = `Mengunduh data APJ… ${pct}%`;
         }
       ),
       loadParquetToGeoJSON(
@@ -450,7 +455,7 @@ export const module = {
           Loading.heartbeat?.();
           const pct = total ? Math.round((received / total) * 100) : 0;
           const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data ruasâ€¦ ${pct}%`;
+          if (st) st.textContent = `Mengunduh data ruas… ${pct}%`;
         }
       ),
     ]);
