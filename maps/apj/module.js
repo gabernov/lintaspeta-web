@@ -18,6 +18,7 @@ let legendEl = null, legendContent = null;
 let badgeEl = null;
 let statsEls = {};         // hero stats: total, ruas, baik, rusak
 let kondBarsEl = null;     // per-condition progress bars
+let uptdBarsEl = null;     // per-UPTD progress bars (stats section)
 let chipContainers = {};   // key -> .chips container
 let singleEls = {};        // key -> select element
 let uptdListEl = null;
@@ -98,7 +99,7 @@ function applyFilters() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// STATS — hero + condition progress bars
+// STATS — hero + condition bars + UPTD bars (all in one section)
 // ═══════════════════════════════════════════════════════════
 function updateStats() {
   if (!pjuGeoJSON) return;
@@ -116,8 +117,8 @@ function updateStats() {
   if (statsEls.rusak) statsEls.rusak.textContent = rusak.toLocaleString();
   if (badgeEl) badgeEl.textContent = total.toLocaleString();
 
+  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
   if (kondBarsEl) {
-    const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
     const rows = [
       { label: "Baik", n: baik, color: KONDISI_COLORS["Baik"] },
       { label: "Rusak Ringan", n: rr, color: KONDISI_COLORS["Rusak Ringan"] },
@@ -133,6 +134,23 @@ function updateStats() {
         <div class="bar-track"><div class="bar-fill" style="width:${pct(r.n)}%;background:${r.color}"></div></div>
       </div>
     `).join("");
+  }
+  // UPTD distribution bars live in the stats section too (APJ-only
+  // class names — never touches the shared .uptd-item component).
+  if (uptdBarsEl) {
+    const counts = {};
+    for (const f of feats) counts[f.properties?.UPTD] = (counts[f.properties?.UPTD] || 0) + 1;
+    uptdBarsEl.innerHTML = ["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"].map((u) => {
+      const n = counts[u] || 0;
+      const color = UPTD_COLORS[u] || UPTD_DEFAULT;
+      return `<div class="bar-row">
+        <div class="bar-head">
+          <span class="bar-label"><span class="bar-dot" style="background:${color}"></span>${u}</span>
+          <span class="bar-count">${n.toLocaleString()}<em>${pct(n)}%</em></span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(n)}%;background:${color}"></div></div>
+      </div>`;
+    }).join("");
   }
 }
 
@@ -251,6 +269,7 @@ function createDOM() {
           </div>
         </div>
         <div class="stats-bars" id="kond-bars"></div>
+        <div class="stats-bars" id="uptd-bars"></div>
       </section>
 
       <section class="panel-section" aria-label="Filter data">
@@ -291,6 +310,7 @@ function createDOM() {
     rusak: document.getElementById("stat-rusak"),
   };
   kondBarsEl = document.getElementById("kond-bars");
+  uptdBarsEl = document.getElementById("uptd-bars");
   uptdListEl = document.getElementById("uptd-list");
 
   // Collapsible sections
@@ -377,7 +397,7 @@ function removeDOM() {
   if (legendEl && legendEl.parentNode) legendEl.parentNode.removeChild(legendEl);
   panel = panelHeader = panelBody = panelToggle = sheetHandle = null;
   legendEl = legendContent = badgeEl = null;
-  uptdListEl = kondBarsEl = null;
+  uptdListEl = kondBarsEl = uptdBarsEl = null;
   statsEls = {};
   chipContainers = {};
   singleEls = {};

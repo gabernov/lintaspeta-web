@@ -147,6 +147,9 @@ body.light .kpi-bad .kpi-value { color: #DC2626; }
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
 }
+.stats-bars + .stats-bars {
+  border-top: 2px solid rgba(124, 58, 237, 0.25);
+}
 
 /* ── Section headers (collapsible) ─────────────────────────── */
 .section-header {
