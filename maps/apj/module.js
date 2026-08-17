@@ -28,6 +28,9 @@ let chipSel = {};
 let singleSel = {};
 // UPTD multi-toggle state (toggled via the stats bars)
 let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
+    activeKondisi = new Set(["Baik", "Rusak Ringan", "Rusak Berat", "Mati"]);
+// Kondisi multi-toggle state (toggled via the stats bars)
+let activeKondisi = new Set(["Baik", "Rusak Ringan", "Rusak Berat", "Mati"]);
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HANDLER REFS (for teardown)
@@ -36,6 +39,7 @@ let styleLoadHandler = null;
 let basemapChangedHandler = null;
 let pjuHitboxClickHandler = null;
 let onUptdBarClick = null;
+let onKondBarClick = null;
 let chipHandlers = [];       // [{ el, h }]
 let singleHandlers = [];     // [{ el, h }]
 let sectionHandlers = [];
@@ -47,6 +51,15 @@ function matchesFeature(ft) {
   const p = ft.properties;
   if (!p) return false;
   if (!activeUPTD.has(p.UPTD)) return false;
+  if (!activeKondisi.has(p.Kondisi)) return false;
+  const kond = Array.from(activeKondisi);
+  if (kond.length === 4) {
+    // all selected — no constraint
+  } else if (kond.length) {
+    conds.push(["in", ["get", "Kondisi"], ["literal", kond]]);
+  } else {
+    conds.push(["==", ["get", "Kondisi"], "__none__"]);
+  }
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
     if (f.type === "single") {
@@ -123,15 +136,16 @@ function updateStats() {
       { label: "Rusak Berat", n: rb, color: KONDISI_COLORS["Rusak Berat"] },
       { label: "Mati", n: mati, color: KONDISI_COLORS["Mati"] },
     ];
-    kondBarsEl.innerHTML = rows.map((r) => `
-      <div class="bar-row">
+    kondBarsEl.innerHTML = rows.map((r) => {
+      const on = activeKondisi.has(r.label);
+      return `<button type="button" class="kond-bar${on ? " on" : ""}" data-kond="${r.label}" aria-pressed="${on}">
         <div class="bar-head">
           <span class="bar-label"><span class="bar-dot" style="background:${r.color}"></span>${r.label}</span>
           <span class="bar-count">${r.n.toLocaleString()}<em>${pct(r.n)}%</em></span>
         </div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct(r.n)}%;background:${r.color}"></div></div>
-      </div>
-    `).join("");
+      </button>`;
+    }).join("");
   }
   // UPTD distribution bars double as toggle buttons (click to hide/show
   // that UPTD). APJ-only class names â€” never touches shared components.
@@ -200,8 +214,8 @@ function createDOM() {
       <span class="panel-icon" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25M5.25 12H3m15 0h2.25M6.34 6.34l-1.591-1.591m14.903 0l-1.591 1.591M12 18.75V21M8.25 12a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 15.75h4.5v2.25a1.5 1.5 0 01-1.5 1.5h-1.5a1.5 1.5 0 01-1.5-1.5v-2.25z"/></svg>
       </span>
-      <h1 class="panel-title">Peta APJ (PJU) Jabar</h1>
-      <span class="badge" id="pju-badge" aria-label="Jumlah titik PJU">0</span>
+      <h1 class="panel-title">Peta APJ Jabar</h1>
+      <span class="badge" id="pju-badge" aria-label="Jumlah titik APJ">0</span>
       <button id="panel-toggle"
               class="panel-toggle-btn"
               title="Minimalkan panel"
@@ -214,9 +228,9 @@ function createDOM() {
       </button>
     </div>
     <div id="panel-body" role="region" aria-label="Informasi data APJ">
-      <section class="panel-section stats-section" aria-label="Statistik PJU">
+      <section class="panel-section stats-section" aria-label="Statistik APJ">
         <div class="stats-hero">
-          <div class="stats-hero-label">Total Titik PJU</div>
+          <div class="stats-hero-label">Total Titik APJ</div>
           <div class="stats-hero-value" id="stat-total">0</div>
         </div>
         <div class="stats-kpi">
@@ -329,7 +343,7 @@ function createDOM() {
   legendContent.className = "legend-content";
   const legendTitle = document.createElement("div");
   legendTitle.className = "legend-title";
-  legendTitle.textContent = "Kondisi PJU";
+  legendTitle.textContent = "Kondisi APJ";
   legendEl.appendChild(legendTitle);
   legendEl.appendChild(legendContent);
   document.getElementById("map").appendChild(legendEl);
@@ -427,7 +441,7 @@ export const module = {
           Loading.heartbeat?.();
           const pct = total ? Math.round((received / total) * 100) : 0;
           const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data PJUâ€¦ ${pct}%`;
+          if (st) st.textContent = `Mengunduh data APJâ€¦ ${pct}%`;
         }
       ),
       loadParquetToGeoJSON(
@@ -450,7 +464,7 @@ export const module = {
     Loading.hide();
 
     if (!pjuGeoJSON) {
-      toast("Gagal memuat data PJU");
+      toast("Gagal memuat data APJ");
       return;
     }
 
@@ -465,7 +479,7 @@ export const module = {
     // Search: PJU by ruas / tiang id
     if (ctx?.search?.registerSearch && pjuGeoJSON) {
       ctx.search.registerSearch({
-        placeholder: "Cari ruas / ID tiang PJU...",
+        placeholder: "Cari ruas / ID tiang APJ...",
         onQuery: async (q) => {
           const term = q.toLowerCase();
           const matches = pjuGeoJSON.features.filter((f) => {
@@ -478,7 +492,7 @@ export const module = {
             const p = f.properties;
             const c = f.geometry?.coordinates;
             return {
-              title: p["Nama Ruas (Resmi)"] || "PJU",
+              title: p["Nama Ruas (Resmi)"] || "APJ",
               subtitle: `${p.Id_Tiang || "-"} Â· ${p.UPTD || "-"}`,
               action: () => {
                 if (!c) return;
@@ -511,6 +525,17 @@ export const module = {
     };
     uptdBarsEl.addEventListener("click", onUptdBarClick);
 
+    // Kondisi toggle via the stats bars (event delegation survives re-render)
+    onKondBarClick = (e) => {
+      const bar = e.target.closest(".kond-bar");
+      if (!bar) return;
+      const k = bar.dataset.kond;
+      if (activeKondisi.has(k)) activeKondisi.delete(k);
+      else activeKondisi.add(k);
+      applyFilters();
+    };
+    kondBarsEl.addEventListener("click", onKondBarClick);
+
     styleLoadHandler = () => { reAddLayers(); };
     map.on("style.load", styleLoadHandler);
     basemapChangedHandler = () => { reAddLayers(); };
@@ -525,6 +550,7 @@ export const module = {
     if (basemapChangedHandler) { map.off("basemap-changed", basemapChangedHandler); basemapChangedHandler = null; }
     if (pjuHitboxClickHandler) { map.off("click", "pju-hitbox", pjuHitboxClickHandler); pjuHitboxClickHandler = null; }
     if (onUptdBarClick && uptdBarsEl) { uptdBarsEl.removeEventListener("click", onUptdBarClick); onUptdBarClick = null; }
+    if (onKondBarClick && kondBarsEl) { kondBarsEl.removeEventListener("click", onKondBarClick); onKondBarClick = null; }
     for (const { el, h } of chipHandlers) {
       el.removeEventListener("click", h);
     }

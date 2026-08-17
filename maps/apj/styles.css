@@ -221,6 +221,27 @@ body.light .bar-track { background: rgba(15, 23, 42, 0.07); }
   transition: width 300ms ease;
 }
 
+/* ── Kondisi bars = clickable toggle buttons ──────────────── */
+#kond-bars { display: flex; flex-direction: column; gap: 8px; }
+.kond-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 150ms ease;
+}
+.kond-bar:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+.kond-bar.on { border-color: rgba(34, 197, 94, 0.45); }
+.kond-bar:not(.on) { opacity: 0.45; }
+.kond-bar:not(.on) .bar-fill { opacity: 0.35; }
+
 /* ── UPTD bars = clickable toggle buttons ─────────────────── */
 #uptd-bars { display: flex; flex-direction: column; gap: 8px; }
 .uptd-bar {

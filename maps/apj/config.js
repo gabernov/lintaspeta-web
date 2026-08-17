@@ -26,7 +26,7 @@ export default {
     { key: "UPTD", label: "UPTD", type: "multi" },
     { key: "Kabupaten/Kota", label: "Kab/Kota", type: "single" },
     { key: "Kondisi", label: "Kondisi", type: "chips" },
-    { key: "Jenis_PJU", label: "Jenis PJU", type: "chips" },
+    { key: "Jenis_PJU", label: "Jenis APJ", type: "chips" },
     { key: "Jenis_Tian", label: "Jenis Tiang", type: "chips" },
     { key: "Bahan_Tian", label: "Bahan", type: "chips" },
     { key: "Jenis_Lamp", label: "Jenis Lamp", type: "chips" },
@@ -106,12 +106,12 @@ export default {
     const kond = KONDISI_COLORS[p.Kondisi] ? `<span style="color:${KONDISI_COLORS[p.Kondisi]};font-weight:700;">${escHtml(p.Kondisi || "-")}</span>` : escHtml(p.Kondisi || "-");
     const uptd = UPTD_COLORS[p.UPTD] ? `<span style="color:${UPTD_COLORS[p.UPTD]};font-weight:700;">${escHtml(p.UPTD || "-")}</span>` : escHtml(p.UPTD || "-");
     return `<div>
-      <b style="font-size:14px;">${escHtml(p["Nama Ruas (Resmi)"] || "PJU")}</b><br/>
+      <b style="font-size:14px;">${escHtml(p["Nama Ruas (Resmi)"] || "APJ")}</b><br/>
       <span style="color:#94a3b8;">${escHtml(p["Id_Tiang"] || "")}</span><br/><br/>
       <b>UPTD:</b> ${uptd}<br/>
       <b>Kab/Kota:</b> ${escHtml(p["Kabupaten/Kota"] || "-")}<br/>
       <b>Kondisi:</b> ${kond}<br/>
-      <b>Jenis PJU:</b> ${escHtml(p["Jenis_PJU"] || "-")}<br/>
+      <b>Jenis APJ:</b> ${escHtml(p["Jenis_PJU"] || "-")}<br/>
       <b>Jenis Tiang:</b> ${escHtml(p["Jenis_Tian"] || "-")}<br/>
       <b>Bahan:</b> ${escHtml(p["Bahan_Tian"] || "-")}<br/>
       <b>Jenis Lamp:</b> ${escHtml(p["Jenis_Lamp"] || "-")}<br/>
