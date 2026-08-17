@@ -51,17 +51,22 @@ function parseWKB(wkbBuffer) {
     const geomType = view.getUint32(offset, littleEndian);
     offset += 4;
 
-    // EWKB: strip Z/M flags to get the base type. geomType >= 1000 means
-    // extended (EWKB) — e.g. 1002 = LineStringZ, 1005 = MultiLineStringZ.
-    const hasZ = geomType >= 1000;
-    const baseType = hasZ ? geomType % 1000 : geomType;
-    if (geomType & 0x20000000) offset += 4; // EWKB SRID flag
+    // EWKB type flags live in the high bits:
+    //   0x20000000 = has SRID, 0x80000000 = Z, 0x40000000 = M.
+    // PostGIS legacy encodes the same info as type 1000+n (Z) / 2000+n (ZM)
+    // without flags (e.g. 1005 = MultiLineStringZ).
+    const hasSRID = (geomType & 0x20000000) !== 0;
+    let baseType = geomType & 0x0FFFFFFF; // strip all EWKB flags
+    const hasZ = (geomType & 0x80000000) !== 0 || baseType >= 1000;
+    const hasM = (geomType & 0x40000000) !== 0 || baseType >= 2000;
+    if (baseType >= 1000) baseType %= 1000; // PostGIS legacy ZM encoding
+    if (hasSRID) offset += 4;
 
     function readPoint() {
       const x = view.getFloat64(offset, littleEndian); offset += 8;
       const y = view.getFloat64(offset, littleEndian); offset += 8;
       if (hasZ) offset += 8; // skip Z
-      if (geomType & 0x80000000 || geomType & 0x40000000) offset += 8; // skip M
+      if (hasM) offset += 8; // skip M
       return [x, y];
     }
     function readPoints() {
