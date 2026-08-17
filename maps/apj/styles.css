@@ -163,66 +163,60 @@
 .kond-row span:nth-child(2) { flex: 1; }
 .kond-row b { font-variant-numeric: tabular-nums; font-family: 'Fira Code', 'Fira Sans', monospace; }
 
-/* ── Filter grid (multi-attribute) ────────────────────────── */
+/* ── Filter grid (multi-attribute chips) ──────────────────── */
 .filter-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .filter-field {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
 .filter-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
-  min-width: 76px;
-  flex-shrink: 0;
 }
-.filter-field select {
-  flex: 1;
-  appearance: none;
-  -webkit-appearance: none;
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 7px 26px 7px 9px;
-  font-size: 12px;
-  font-family: inherit;
-  color: var(--text-primary);
+  border-radius: 999px;
+  color: var(--text-secondary);
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
+  transition: all 150ms ease;
 }
-.filter-field select:hover { border-color: var(--border-strong); }
-.filter-field select:focus {
-  outline: none;
-  border-color: #7C3AED;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
-}
-
-/* ── Kabupaten select ─────────────────────────────────────── */
-#kab-select {
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 8px 30px 8px 10px;
-  font-size: 12px;
-  font-family: inherit;
+.chip-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
 }
-#kab-select:hover { border-color: var(--border-strong); }
-#kab-select:focus { outline: none; border-color: #7C3AED; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2); }
+.chip-btn.active {
+  background: rgba(124, 58, 237, 0.16);
+  border-color: rgba(124, 58, 237, 0.55);
+  color: #C4B5FD;
+  font-weight: 600;
+}
+body.light .chip-btn.active {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.45);
+  color: #6D28D9;
+}
 
 /* ── UPTD list ────────────────────────────────────────────── */
 .uptd-list { display: flex; flex-direction: column; gap: 6px; }

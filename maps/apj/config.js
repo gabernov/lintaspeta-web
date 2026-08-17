@@ -21,16 +21,17 @@ export default {
   title: "Peta APJ",
   icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25M5.25 12H3m15 0h2.25M6.34 6.34l-1.591-1.591m14.903 0l-1.591 1.591M12 18.75V21M8.25 12a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 15.75h4.5v2.25a1.5 1.5 0 01-1.5 1.5h-1.5a1.5 1.5 0 01-1.5-1.5v-2.25z"/></svg>',
   // Filterable attribute columns (in order shown in the panel).
+  // type: "multi" = toggle list; "chips" = selectable chip buttons.
   filterFields: [
     { key: "UPTD", label: "UPTD", type: "multi" },
-    { key: "Kabupaten/Kota", label: "Kab/Kota", type: "single" },
-    { key: "Kondisi", label: "Kondisi", type: "single" },
-    { key: "Jenis_PJU", label: "Jenis PJU", type: "single" },
-    { key: "Jenis_Tian", label: "Jenis Tiang", type: "single" },
-    { key: "Bahan_Tian", label: "Bahan", type: "single" },
-    { key: "Jenis_Lamp", label: "Jenis Lamp", type: "single" },
-    { key: "Tahun_Angg", label: "Tahun", type: "single" },
-    { key: "Posisi_Tia", label: "Posisi", type: "single" },
+    { key: "Kabupaten/Kota", label: "Kab/Kota", type: "chips" },
+    { key: "Kondisi", label: "Kondisi", type: "chips" },
+    { key: "Jenis_PJU", label: "Jenis PJU", type: "chips" },
+    { key: "Jenis_Tian", label: "Jenis Tiang", type: "chips" },
+    { key: "Bahan_Tian", label: "Bahan", type: "chips" },
+    { key: "Jenis_Lamp", label: "Jenis Lamp", type: "chips" },
+    { key: "Tahun_Angg", label: "Tahun", type: "chips" },
+    { key: "Posisi_Tia", label: "Posisi", type: "chips" },
   ],
   dataFiles: [
     "data/pju_detail.parquet",

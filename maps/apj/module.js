@@ -17,13 +17,14 @@ let sheetTeardown = null;
 let legendEl = null, legendContent = null;
 let badgeEl = null;
 let statsEls = {};
-let filterEls = {};      // key -> select element (single) 
-let uptdListEl = null;   // multi-select UPTD
+let chipContainers = {};  // key -> .chips container
+let uptdListEl = null;
 let kondStatEl = null;
 
-// Filter state: multiUPTD = Set; singles = { key: value|'all' }
+// Chip filter state: key -> Set of selected values (empty = all)
+let chipSel = {};
+// UPTD multi-toggle state
 let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
-let singles = {}; // initialized from config.filterFields (type single)
 
 // ═══════════════════════════════════════════════════════════
 // HANDLER REFS (for teardown)
@@ -32,19 +33,25 @@ let styleLoadHandler = null;
 let basemapChangedHandler = null;
 let pjuHitboxClickHandler = null;
 let onUptdClick = null;
-let singleChangeHandlers = [];
+let chipHandlers = [];       // [{ el, h }]
+let sectionHandlers = [];
 
 // ═══════════════════════════════════════════════════════════
 // FILTERS
 // ═══════════════════════════════════════════════════════════
+function fieldSelected(key) {
+  const s = chipSel[key];
+  return s && s.size > 0;
+}
+
 function matchesFeature(ft) {
   const p = ft.properties;
   if (!p) return false;
   if (!activeUPTD.has(p.UPTD)) return false;
   for (const f of config.filterFields) {
-    if (f.type === "multi") continue; // UPTD handled above
-    const want = singles[f.key];
-    if (want && want !== "all" && p[f.key] !== want) return false;
+    if (f.type === "multi") continue;
+    if (!fieldSelected(f.key)) continue;
+    if (!chipSel[f.key].has(p[f.key])) return false;
   }
   return true;
 }
@@ -61,9 +68,9 @@ function buildPointFilter() {
   }
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
-    const want = singles[f.key];
-    if (want && want !== "all") {
-      conds.push(["==", ["get", f.key], want]);
+    const vals = fieldSelected(f.key) ? Array.from(chipSel[f.key]) : null;
+    if (vals) {
+      conds.push(["in", ["get", f.key], ["literal", vals]]);
     }
   }
   return ["all", ...conds];
@@ -76,6 +83,7 @@ function applyFilters() {
   map.setFilter("pju-hitbox", f);
   updateStats();
   renderUPTDList();
+  renderChips();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -85,7 +93,7 @@ function updateStats() {
   if (!pjuGeoJSON) return;
   const feats = pjuGeoJSON.features.filter(matchesFeature);
   const total = feats.length;
-  const baik = feats.filter((f) => ["Baik", "BAIK", "Baik Baik"].includes(f.properties?.Kondisi)).length;
+  const baik = feats.filter((f) => f.properties?.Kondisi === "Baik").length;
   const rusak = feats.filter((f) => ["Rusak", "Rusak Berat", "Rusak Ringan"].includes(f.properties?.Kondisi)).length;
   if (statsEls.total) statsEls.total.textContent = total.toLocaleString();
   if (statsEls.ruas) statsEls.ruas.textContent = (ruasGeoJSON?.features.length || 0).toLocaleString();
@@ -111,8 +119,8 @@ function renderUPTDList() {
     const p = ft.properties;
     for (const f of config.filterFields) {
       if (f.type === "multi") continue;
-      const want = singles[f.key];
-      if (want && want !== "all" && p[f.key] !== want) return false;
+      if (!fieldSelected(f.key)) continue;
+      if (!chipSel[f.key].has(p[f.key])) return false;
     }
     return true;
   });
@@ -130,6 +138,20 @@ function renderUPTDList() {
       <span class="uptd-count">${(counts[u] || 0).toLocaleString()}</span>
     </button>`;
   }).join("");
+}
+
+function renderChips() {
+  for (const f of config.filterFields) {
+    if (f.type === "multi") continue;
+    const container = chipContainers[f.key];
+    if (!container || !pjuGeoJSON) continue;
+    const opts = buildFilterOptions(f.key);
+    const sel = chipSel[f.key] || new Set();
+    container.innerHTML = opts.map((o) => {
+      const active = sel.has(o);
+      return `<button class="chip-btn${active ? " active" : ""}" data-value="${escHtml(o)}" aria-pressed="${active}">${escHtml(o)}</button>`;
+    }).join("");
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -221,31 +243,31 @@ function createDOM() {
       </section>
 
       <section class="panel-section" aria-label="Rincian kondisi">
-        <div class="section-header">
+        <div class="section-header" data-collapse="kond">
           <span class="section-chevron" aria-hidden="true">▸</span>
           <h2 class="section-title">Rincian Kondisi</h2>
         </div>
-        <div class="section-content">
+        <div class="section-content" data-collapse-target="kond">
           <div id="kond-stats"></div>
         </div>
       </section>
 
       <section class="panel-section" aria-label="Filter data">
-        <div class="section-header">
+        <div class="section-header" data-collapse="filter">
           <span class="section-chevron" aria-hidden="true">▸</span>
           <h2 class="section-title">Filter Data</h2>
         </div>
-        <div class="section-content">
+        <div class="section-content" data-collapse-target="filter">
           <div class="filter-grid" id="filter-grid"></div>
         </div>
       </section>
 
       <section class="panel-section" id="uptd-section" aria-label="Filter UPTD">
-        <div class="section-header">
+        <div class="section-header" data-collapse="uptd">
           <span class="section-chevron" aria-hidden="true">▸</span>
           <h2 class="section-title">UPTD</h2>
         </div>
-        <div class="section-content">
+        <div class="section-content" data-collapse-target="uptd">
           <div class="uptd-list" id="uptd-list" role="group" aria-label="Daftar UPTD"></div>
         </div>
       </section>
@@ -270,28 +292,42 @@ function createDOM() {
   kondStatEl = document.getElementById("kond-stats");
   uptdListEl = document.getElementById("uptd-list");
 
-  // Build single-select filters
+  // Collapsible sections
+  panel.querySelectorAll(".section-header[data-collapse]").forEach((header) => {
+    const target = panel.querySelector(`.section-content[data-collapse-target="${header.dataset.collapse}"]`);
+    if (!target) return;
+    const toggle = () => {
+      const open = target.style.display !== "none";
+      target.style.display = open ? "none" : "";
+      header.classList.toggle("open", !open);
+    };
+    header.addEventListener("click", toggle);
+    sectionHandlers.push({ header, toggle });
+  });
+
+  // Build chip filters
   const grid = document.getElementById("filter-grid");
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
-    singles[f.key] = "all";
-    const opts = buildFilterOptions(f.key);
-    const wrap = document.createElement("label");
+    chipSel[f.key] = new Set();
+    const wrap = document.createElement("div");
     wrap.className = "filter-field";
     wrap.innerHTML = `<span class="filter-label">${escHtml(f.label)}</span>
-      <select data-filter="${escHtml(f.key)}">
-        <option value="all">Semua</option>
-        ${opts.map((o) => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join("")}
-      </select>`;
+      <div class="chips" data-chips="${escHtml(f.key)}"></div>`;
     grid.appendChild(wrap);
-    const sel = wrap.querySelector("select");
-    filterEls[f.key] = sel;
-    const h = () => {
-      singles[f.key] = sel.value;
+    const container = wrap.querySelector(".chips");
+    chipContainers[f.key] = container;
+    const h = (e) => {
+      const btn = e.target.closest(".chip-btn");
+      if (!btn) return;
+      const val = btn.dataset.value;
+      const s = chipSel[f.key];
+      if (s.has(val)) s.delete(val);
+      else s.add(val);
       applyFilters();
     };
-    sel.addEventListener("change", h);
-    singleChangeHandlers.push({ el: sel, h });
+    container.addEventListener("click", h);
+    chipHandlers.push({ el: container, h });
   }
 
   // Legend (floating, bottom-right)
@@ -325,7 +361,7 @@ function removeDOM() {
   legendEl = legendContent = badgeEl = null;
   uptdListEl = kondStatEl = null;
   statsEls = {};
-  filterEls = {};
+  chipContainers = {};
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -344,7 +380,6 @@ function addLayers() {
     for (const l of config.layers.filter((x) => x.source === "pju-points")) {
       if (!map.getLayer(l.id)) map.addLayer(l);
     }
-    // Keep PJU points above roads
     if (map.getLayer("apj-roads-line")) {
       for (const id of config.layers.filter((x) => x.source === "pju-points").map((l) => l.id)) {
         if (map.getLayer(id)) map.moveLayer(id, "apj-roads-line");
@@ -430,6 +465,7 @@ export const module = {
     addLayers();
     updateStats();
     renderUPTDList();
+    renderChips();
 
     // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
@@ -497,10 +533,14 @@ export const module = {
     if (basemapChangedHandler) { map.off("basemap-changed", basemapChangedHandler); basemapChangedHandler = null; }
     if (pjuHitboxClickHandler) { map.off("click", "pju-hitbox", pjuHitboxClickHandler); pjuHitboxClickHandler = null; }
     if (onUptdClick && uptdListEl) { uptdListEl.removeEventListener("click", onUptdClick); onUptdClick = null; }
-    for (const { el, h } of singleChangeHandlers) {
-      el.removeEventListener("change", h);
+    for (const { el, h } of chipHandlers) {
+      el.removeEventListener("click", h);
     }
-    singleChangeHandlers = [];
+    chipHandlers = [];
+    for (const { header, toggle } of sectionHandlers) {
+      header.removeEventListener("click", toggle);
+    }
+    sectionHandlers = [];
 
     const layerIds = ["pju-hitbox", "pju-circle", "apj-roads-line"];
     for (const id of layerIds) {
@@ -522,7 +562,7 @@ export const module = {
     pjuGeoJSON = null;
     ruasGeoJSON = null;
     activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
-    singles = {};
+    chipSel = {};
     map = null;
   },
 };
