@@ -16,13 +16,16 @@ let panel = null, panelHeader = null, panelBody = null, panelToggle = null, shee
 let sheetTeardown = null;
 let legendEl = null, legendContent = null;
 let badgeEl = null;
-let statsEls = {};
-let chipContainers = {};  // key -> .chips container
+let statsEls = {};         // hero stats: total, ruas, baik, rusak
+let kondBarsEl = null;     // per-condition progress bars
+let chipContainers = {};   // key -> .chips container
+let singleEls = {};        // key -> select element
 let uptdListEl = null;
-let kondStatEl = null;
 
 // Chip filter state: key -> Set of selected values (empty = all)
 let chipSel = {};
+// Single-select (dropdown) filter state
+let singleSel = {};
 // UPTD multi-toggle state
 let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
 
@@ -34,24 +37,25 @@ let basemapChangedHandler = null;
 let pjuHitboxClickHandler = null;
 let onUptdClick = null;
 let chipHandlers = [];       // [{ el, h }]
+let singleHandlers = [];     // [{ el, h }]
 let sectionHandlers = [];
 
 // ═══════════════════════════════════════════════════════════
 // FILTERS
 // ═══════════════════════════════════════════════════════════
-function fieldSelected(key) {
-  const s = chipSel[key];
-  return s && s.size > 0;
-}
-
 function matchesFeature(ft) {
   const p = ft.properties;
   if (!p) return false;
   if (!activeUPTD.has(p.UPTD)) return false;
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
-    if (!fieldSelected(f.key)) continue;
-    if (!chipSel[f.key].has(p[f.key])) return false;
+    if (f.type === "single") {
+      const want = singleSel[f.key];
+      if (want && want !== "all" && p[f.key] !== want) return false;
+    } else {
+      const s = chipSel[f.key];
+      if (s && s.size > 0 && !s.has(p[f.key])) return false;
+    }
   }
   return true;
 }
@@ -68,9 +72,16 @@ function buildPointFilter() {
   }
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
-    const vals = fieldSelected(f.key) ? Array.from(chipSel[f.key]) : null;
-    if (vals) {
-      conds.push(["in", ["get", f.key], ["literal", vals]]);
+    if (f.type === "single") {
+      const want = singleSel[f.key];
+      if (want && want !== "all") {
+        conds.push(["==", ["get", f.key], want]);
+      }
+    } else {
+      const s = chipSel[f.key];
+      if (s && s.size > 0) {
+        conds.push(["in", ["get", f.key], ["literal", Array.from(s)]]);
+      }
     }
   }
   return ["all", ...conds];
@@ -87,29 +98,41 @@ function applyFilters() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// STATS
+// STATS — hero + condition progress bars
 // ═══════════════════════════════════════════════════════════
 function updateStats() {
   if (!pjuGeoJSON) return;
   const feats = pjuGeoJSON.features.filter(matchesFeature);
   const total = feats.length;
   const baik = feats.filter((f) => f.properties?.Kondisi === "Baik").length;
-  const rusak = feats.filter((f) => ["Rusak", "Rusak Berat", "Rusak Ringan"].includes(f.properties?.Kondisi)).length;
+  const rr = feats.filter((f) => f.properties?.Kondisi === "Rusak Ringan").length;
+  const rb = feats.filter((f) => f.properties?.Kondisi === "Rusak Berat").length;
+  const mati = feats.filter((f) => f.properties?.Kondisi === "Mati").length;
+  const rusak = rr + rb;
+
   if (statsEls.total) statsEls.total.textContent = total.toLocaleString();
   if (statsEls.ruas) statsEls.ruas.textContent = (ruasGeoJSON?.features.length || 0).toLocaleString();
   if (statsEls.baik) statsEls.baik.textContent = baik.toLocaleString();
   if (statsEls.rusak) statsEls.rusak.textContent = rusak.toLocaleString();
   if (badgeEl) badgeEl.textContent = total.toLocaleString();
-  if (kondStatEl) {
-    const rr = feats.filter((f) => f.properties?.Kondisi === "Rusak Ringan").length;
-    const rb = feats.filter((f) => f.properties?.Kondisi === "Rusak Berat").length;
-    const mati = feats.filter((f) => f.properties?.Kondisi === "Mati").length;
-    kondStatEl.innerHTML = `
-      <div class="kond-row"><span class="kond-dot" style="background:${KONDISI_COLORS["Baik"]}"></span><span>Baik</span><b>${baik.toLocaleString()}</b></div>
-      <div class="kond-row"><span class="kond-dot" style="background:${KONDISI_COLORS["Rusak Ringan"]}"></span><span>Rusak Ringan</span><b>${rr.toLocaleString()}</b></div>
-      <div class="kond-row"><span class="kond-dot" style="background:${KONDISI_COLORS["Rusak Berat"]}"></span><span>Rusak Berat</span><b>${rb.toLocaleString()}</b></div>
-      <div class="kond-row"><span class="kond-dot" style="background:${KONDISI_COLORS["Mati"]}"></span><span>Mati</span><b>${mati.toLocaleString()}</b></div>
-    `;
+
+  if (kondBarsEl) {
+    const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+    const rows = [
+      { label: "Baik", n: baik, color: KONDISI_COLORS["Baik"] },
+      { label: "Rusak Ringan", n: rr, color: KONDISI_COLORS["Rusak Ringan"] },
+      { label: "Rusak Berat", n: rb, color: KONDISI_COLORS["Rusak Berat"] },
+      { label: "Mati", n: mati, color: KONDISI_COLORS["Mati"] },
+    ];
+    kondBarsEl.innerHTML = rows.map((r) => `
+      <div class="bar-row">
+        <div class="bar-head">
+          <span class="bar-label"><span class="bar-dot" style="background:${r.color}"></span>${r.label}</span>
+          <span class="bar-count">${r.n.toLocaleString()}<em>${pct(r.n)}%</em></span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(r.n)}%;background:${r.color}"></div></div>
+      </div>
+    `).join("");
   }
 }
 
@@ -119,8 +142,13 @@ function renderUPTDList() {
     const p = ft.properties;
     for (const f of config.filterFields) {
       if (f.type === "multi") continue;
-      if (!fieldSelected(f.key)) continue;
-      if (!chipSel[f.key].has(p[f.key])) return false;
+      if (f.type === "single") {
+        const want = singleSel[f.key];
+        if (want && want !== "all" && p[f.key] !== want) return false;
+      } else {
+        const s = chipSel[f.key];
+        if (s && s.size > 0 && !s.has(p[f.key])) return false;
+      }
     }
     return true;
   });
@@ -129,13 +157,19 @@ function renderUPTDList() {
     const u = f.properties?.UPTD;
     counts[u] = (counts[u] || 0) + 1;
   }
+  const total = feats.length;
+  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
   uptdListEl.innerHTML = ["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"].map((u) => {
     const active = activeUPTD.has(u);
     const color = UPTD_COLORS[u] || UPTD_DEFAULT;
+    const n = counts[u] || 0;
     return `<button class="uptd-item${active ? " active" : ""}" data-uptd="${u}" role="checkbox" aria-checked="${active}">
-      <span class="uptd-dot" style="background:${color}"></span>
-      <span class="uptd-name">${u}</span>
-      <span class="uptd-count">${(counts[u] || 0).toLocaleString()}</span>
+      <div class="uptd-row">
+        <span class="uptd-dot" style="background:${color}"></span>
+        <span class="uptd-name">${u}</span>
+        <span class="uptd-count">${n.toLocaleString()}<em>${pct(n)}%</em></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct(n)}%;background:${color}"></div></div>
     </button>`;
   }).join("");
 }
@@ -242,13 +276,13 @@ function createDOM() {
         </div>
       </section>
 
-      <section class="panel-section" aria-label="Rincian kondisi">
+      <section class="panel-section" aria-label="Distribusi kondisi">
         <div class="section-header" data-collapse="kond">
           <span class="section-chevron" aria-hidden="true">▸</span>
-          <h2 class="section-title">Rincian Kondisi</h2>
+          <h2 class="section-title">Distribusi Kondisi</h2>
         </div>
         <div class="section-content" data-collapse-target="kond">
-          <div id="kond-stats"></div>
+          <div id="kond-bars"></div>
         </div>
       </section>
 
@@ -262,10 +296,10 @@ function createDOM() {
         </div>
       </section>
 
-      <section class="panel-section" id="uptd-section" aria-label="Filter UPTD">
+      <section class="panel-section" id="uptd-section" aria-label="Distribusi UPTD">
         <div class="section-header" data-collapse="uptd">
           <span class="section-chevron" aria-hidden="true">▸</span>
-          <h2 class="section-title">UPTD</h2>
+          <h2 class="section-title">Distribusi UPTD</h2>
         </div>
         <div class="section-content" data-collapse-target="uptd">
           <div class="uptd-list" id="uptd-list" role="group" aria-label="Daftar UPTD"></div>
@@ -289,7 +323,7 @@ function createDOM() {
     baik: document.getElementById("stat-baik"),
     rusak: document.getElementById("stat-rusak"),
   };
-  kondStatEl = document.getElementById("kond-stats");
+  kondBarsEl = document.getElementById("kond-bars");
   uptdListEl = document.getElementById("uptd-list");
 
   // Collapsible sections
@@ -305,29 +339,46 @@ function createDOM() {
     sectionHandlers.push({ header, toggle });
   });
 
-  // Build chip filters
+  // Build filters: dropdowns (type single) + chips (type chips)
   const grid = document.getElementById("filter-grid");
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
-    chipSel[f.key] = new Set();
+    const opts = buildFilterOptions(f.key);
     const wrap = document.createElement("div");
     wrap.className = "filter-field";
-    wrap.innerHTML = `<span class="filter-label">${escHtml(f.label)}</span>
-      <div class="chips" data-chips="${escHtml(f.key)}"></div>`;
-    grid.appendChild(wrap);
-    const container = wrap.querySelector(".chips");
-    chipContainers[f.key] = container;
-    const h = (e) => {
-      const btn = e.target.closest(".chip-btn");
-      if (!btn) return;
-      const val = btn.dataset.value;
-      const s = chipSel[f.key];
-      if (s.has(val)) s.delete(val);
-      else s.add(val);
-      applyFilters();
-    };
-    container.addEventListener("click", h);
-    chipHandlers.push({ el: container, h });
+
+    if (f.type === "single") {
+      singleSel[f.key] = "all";
+      wrap.innerHTML = `<span class="filter-label">${escHtml(f.label)}</span>
+        <select data-filter="${escHtml(f.key)}">
+          <option value="all">Semua</option>
+          ${opts.map((o) => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join("")}
+        </select>`;
+      grid.appendChild(wrap);
+      const sel = wrap.querySelector("select");
+      singleEls[f.key] = sel;
+      const h = () => { singleSel[f.key] = sel.value; applyFilters(); };
+      sel.addEventListener("change", h);
+      singleHandlers.push({ el: sel, h });
+    } else {
+      chipSel[f.key] = new Set();
+      wrap.innerHTML = `<span class="filter-label">${escHtml(f.label)}</span>
+        <div class="chips" data-chips="${escHtml(f.key)}"></div>`;
+      grid.appendChild(wrap);
+      const container = wrap.querySelector(".chips");
+      chipContainers[f.key] = container;
+      const h = (e) => {
+        const btn = e.target.closest(".chip-btn");
+        if (!btn) return;
+        const val = btn.dataset.value;
+        const s = chipSel[f.key];
+        if (s.has(val)) s.delete(val);
+        else s.add(val);
+        applyFilters();
+      };
+      container.addEventListener("click", h);
+      chipHandlers.push({ el: container, h });
+    }
   }
 
   // Legend (floating, bottom-right)
@@ -359,9 +410,10 @@ function removeDOM() {
   if (legendEl && legendEl.parentNode) legendEl.parentNode.removeChild(legendEl);
   panel = panelHeader = panelBody = panelToggle = sheetHandle = null;
   legendEl = legendContent = badgeEl = null;
-  uptdListEl = kondStatEl = null;
+  uptdListEl = kondBarsEl = null;
   statsEls = {};
   chipContainers = {};
+  singleEls = {};
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -537,6 +589,10 @@ export const module = {
       el.removeEventListener("click", h);
     }
     chipHandlers = [];
+    for (const { el, h } of singleHandlers) {
+      el.removeEventListener("change", h);
+    }
+    singleHandlers = [];
     for (const { header, toggle } of sectionHandlers) {
       header.removeEventListener("click", toggle);
     }

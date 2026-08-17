@@ -146,22 +146,49 @@
 }
 .section-content { overflow: hidden; }
 
-/* ── Kondisi detail rows ──────────────────────────────────── */
-#kond-stats { display: flex; flex-direction: column; gap: 6px; }
-.kond-row {
+/* ── Progress bars (condition + UPTD distribution) ───────── */
+#kond-bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: flex; flex-direction: column; gap: 4px; }
+.bar-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   font-size: 12px;
   color: var(--text-secondary);
-  padding: 6px 10px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
 }
-.kond-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.kond-row span:nth-child(2) { flex: 1; }
-.kond-row b { font-variant-numeric: tabular-nums; font-family: 'Fira Code', 'Fira Sans', monospace; }
+.bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 500;
+}
+.bar-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bar-count {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Fira Code', 'Fira Sans', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.bar-count em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.bar-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+body.light .bar-track { background: rgba(15, 23, 42, 0.07); }
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 300ms ease;
+}
 
 /* ── Filter grid (multi-attribute chips) ──────────────────── */
 .filter-grid {
@@ -180,6 +207,28 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+}
+.filter-field select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 30px 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.filter-field select:hover { border-color: var(--border-strong); }
+.filter-field select:focus {
+  outline: none;
+  border-color: #7C3AED;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
 }
 .chips {
   display: flex;
@@ -218,14 +267,14 @@ body.light .chip-btn.active {
   color: #6D28D9;
 }
 
-/* ── UPTD list ────────────────────────────────────────────── */
+/* ── UPTD list (with progress bars) ───────────────────────── */
 .uptd-list { display: flex; flex-direction: column; gap: 6px; }
 .uptd-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 5px;
   width: 100%;
-  padding: 9px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
@@ -242,14 +291,32 @@ body.light .chip-btn.active {
   background: rgba(124, 58, 237, 0.1);
   color: var(--text-primary);
 }
+.uptd-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .uptd-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .uptd-name { flex: 1; font-weight: 500; }
 .uptd-count {
   font-variant-numeric: tabular-nums;
   font-family: 'Fira Code', 'Fira Sans', monospace;
-  font-size: 11px;
+  font-size: 12px;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.uptd-count em {
+  font-style: normal;
+  font-size: 10px;
   color: var(--text-muted);
 }
+.uptd-item .bar-track {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+body.light .uptd-item .bar-track { background: rgba(15, 23, 42, 0.07); }
 
 /* ── Legend ───────────────────────────────────────────────── */
 #legend {
