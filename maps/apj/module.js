@@ -157,19 +157,15 @@ function renderUPTDList() {
     const u = f.properties?.UPTD;
     counts[u] = (counts[u] || 0) + 1;
   }
-  const total = feats.length;
-  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+  // Same structure as the shared .uptd-item used by other modes.
   uptdListEl.innerHTML = ["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"].map((u) => {
     const active = activeUPTD.has(u);
     const color = UPTD_COLORS[u] || UPTD_DEFAULT;
-    const n = counts[u] || 0;
-    return `<button class="uptd-item${active ? " active" : ""}" data-uptd="${u}" role="checkbox" aria-checked="${active}">
-      <div class="uptd-row">
-        <span class="uptd-dot" style="background:${color}"></span>
-        <span class="uptd-name">${u}</span>
-        <span class="uptd-count">${n.toLocaleString()}<em>${pct(n)}%</em></span>
-      </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct(n)}%;background:${color}"></div></div>
+    return `<button class="uptd-item" data-uptd="${u}" role="checkbox" aria-checked="${active}">
+      <span class="uptd-item-check" aria-hidden="true">${active ? "✓" : ""}</span>
+      <span class="uptd-item-dot" style="background:${color}"></span>
+      <span class="uptd-item-name">${u}</span>
+      <span class="uptd-item-count">${(counts[u] || 0).toLocaleString()}</span>
     </button>`;
   }).join("");
 }
@@ -235,55 +231,26 @@ function createDOM() {
       </button>
     </div>
     <div id="panel-body" role="region" aria-label="Informasi data APJ">
-      <section class="panel-section" aria-label="Statistik PJU">
-        <div class="stats-grid" role="list">
-          <div class="stat-card" role="listitem">
-            <div class="stat-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Total Titik</div>
-              <div class="stat-value" id="stat-total">0</div>
-            </div>
+      <section class="panel-section stats-section" aria-label="Statistik PJU">
+        <div class="stats-hero">
+          <div class="stats-hero-label">Total Titik PJU</div>
+          <div class="stats-hero-value" id="stat-total">0</div>
+        </div>
+        <div class="stats-kpi">
+          <div class="kpi-chip">
+            <span class="kpi-label">Total Ruas</span>
+            <span class="kpi-value" id="stat-ruas">0</span>
           </div>
-          <div class="stat-card stat-card--blue" role="listitem">
-            <div class="stat-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0z"/></svg>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Total Ruas</div>
-              <div class="stat-value stat-value--blue" id="stat-ruas">0</div>
-            </div>
+          <div class="kpi-chip kpi-ok">
+            <span class="kpi-label">Kondisi Baik</span>
+            <span class="kpi-value" id="stat-baik">0</span>
           </div>
-          <div class="stat-card stat-card--green" role="listitem">
-            <div class="stat-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Kondisi Baik</div>
-              <div class="stat-value stat-value--green" id="stat-baik">0</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card--purple" role="listitem">
-            <div class="stat-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Rusak</div>
-              <div class="stat-value stat-value--purple" id="stat-rusak">0</div>
-            </div>
+          <div class="kpi-chip kpi-bad">
+            <span class="kpi-label">Rusak</span>
+            <span class="kpi-value" id="stat-rusak">0</span>
           </div>
         </div>
-      </section>
-
-      <section class="panel-section" aria-label="Distribusi kondisi">
-        <div class="section-header" data-collapse="kond">
-          <span class="section-chevron" aria-hidden="true">▸</span>
-          <h2 class="section-title">Distribusi Kondisi</h2>
-        </div>
-        <div class="section-content" data-collapse-target="kond">
-          <div id="kond-bars"></div>
-        </div>
+        <div class="stats-bars" id="kond-bars"></div>
       </section>
 
       <section class="panel-section" aria-label="Filter data">
@@ -296,10 +263,10 @@ function createDOM() {
         </div>
       </section>
 
-      <section class="panel-section" id="uptd-section" aria-label="Distribusi UPTD">
+      <section class="panel-section" id="uptd-section" aria-label="Filter UPTD">
         <div class="section-header" data-collapse="uptd">
           <span class="section-chevron" aria-hidden="true">▸</span>
-          <h2 class="section-title">Distribusi UPTD</h2>
+          <h2 class="section-title">UPTD</h2>
         </div>
         <div class="section-content" data-collapse-target="uptd">
           <div class="uptd-list" id="uptd-list" role="group" aria-label="Daftar UPTD"></div>
