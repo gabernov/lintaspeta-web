@@ -28,7 +28,6 @@ let chipSel = {};
 let singleSel = {};
 // UPTD multi-toggle state (toggled via the stats bars)
 let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
-    activeKondisi = new Set(["Baik", "Rusak Ringan", "Rusak Berat", "Mati"]);
 // Kondisi multi-toggle state (toggled via the stats bars)
 let activeKondisi = new Set(["Baik", "Rusak Ringan", "Rusak Berat", "Mati"]);
 
@@ -52,14 +51,6 @@ function matchesFeature(ft) {
   if (!p) return false;
   if (!activeUPTD.has(p.UPTD)) return false;
   if (!activeKondisi.has(p.Kondisi)) return false;
-  const kond = Array.from(activeKondisi);
-  if (kond.length === 4) {
-    // all selected — no constraint
-  } else if (kond.length) {
-    conds.push(["in", ["get", "Kondisi"], ["literal", kond]]);
-  } else {
-    conds.push(["==", ["get", "Kondisi"], "__none__"]);
-  }
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
     if (f.type === "single") {
@@ -77,11 +68,19 @@ function buildPointFilter() {
   const conds = [];
   const uptd = Array.from(activeUPTD);
   if (uptd.length === 4) {
-    // all selected â€” no constraint
+    // all selected — no constraint
   } else if (uptd.length) {
     conds.push(["in", ["get", "UPTD"], ["literal", uptd]]);
   } else {
     conds.push(["==", ["get", "UPTD"], "__none__"]);
+  }
+  const kond = Array.from(activeKondisi);
+  if (kond.length === 4) {
+    // all selected — no constraint
+  } else if (kond.length) {
+    conds.push(["in", ["get", "Kondisi"], ["literal", kond]]);
+  } else {
+    conds.push(["==", ["get", "Kondisi"], "__none__"]);
   }
   for (const f of config.filterFields) {
     if (f.type === "multi") continue;
