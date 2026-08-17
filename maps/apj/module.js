@@ -1,13 +1,13 @@
-import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
+﻿import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { showPopup, closePopup } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config, { UPTD_COLORS, KONDISI_COLORS, UPTD_DEFAULT } from "./config.js";
 
 export { config };
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // STATE
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let map = null;
 let pjuGeoJSON = null;
 let ruasGeoJSON = null;
@@ -21,29 +21,28 @@ let kondBarsEl = null;     // per-condition progress bars
 let uptdBarsEl = null;     // per-UPTD progress bars (stats section)
 let chipContainers = {};   // key -> .chips container
 let singleEls = {};        // key -> select element
-let uptdListEl = null;
 
 // Chip filter state: key -> Set of selected values (empty = all)
 let chipSel = {};
 // Single-select (dropdown) filter state
 let singleSel = {};
-// UPTD multi-toggle state
+// UPTD multi-toggle state (toggled via the stats bars)
 let activeUPTD = new Set(["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"]);
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HANDLER REFS (for teardown)
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 let styleLoadHandler = null;
 let basemapChangedHandler = null;
 let pjuHitboxClickHandler = null;
-let onUptdClick = null;
+let onUptdBarClick = null;
 let chipHandlers = [];       // [{ el, h }]
 let singleHandlers = [];     // [{ el, h }]
 let sectionHandlers = [];
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // FILTERS
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function matchesFeature(ft) {
   const p = ft.properties;
   if (!p) return false;
@@ -65,7 +64,7 @@ function buildPointFilter() {
   const conds = [];
   const uptd = Array.from(activeUPTD);
   if (uptd.length === 4) {
-    // all selected — no constraint
+    // all selected â€” no constraint
   } else if (uptd.length) {
     conds.push(["in", ["get", "UPTD"], ["literal", uptd]]);
   } else {
@@ -94,13 +93,12 @@ function applyFilters() {
   map.setFilter("pju-circle", f);
   map.setFilter("pju-hitbox", f);
   updateStats();
-  renderUPTDList();
   renderChips();
 }
 
-// ═══════════════════════════════════════════════════════════
-// STATS — hero + condition bars + UPTD bars (all in one section)
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// STATS â€” hero + condition bars + UPTD bars (all in one section)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function updateStats() {
   if (!pjuGeoJSON) return;
   const feats = pjuGeoJSON.features.filter(matchesFeature);
@@ -135,57 +133,24 @@ function updateStats() {
       </div>
     `).join("");
   }
-  // UPTD distribution bars live in the stats section too (APJ-only
-  // class names — never touches the shared .uptd-item component).
+  // UPTD distribution bars double as toggle buttons (click to hide/show
+  // that UPTD). APJ-only class names â€” never touches shared components.
   if (uptdBarsEl) {
     const counts = {};
     for (const f of feats) counts[f.properties?.UPTD] = (counts[f.properties?.UPTD] || 0) + 1;
     uptdBarsEl.innerHTML = ["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"].map((u) => {
       const n = counts[u] || 0;
       const color = UPTD_COLORS[u] || UPTD_DEFAULT;
-      return `<div class="bar-row">
+      const on = activeUPTD.has(u);
+      return `<button type="button" class="uptd-bar${on ? " on" : ""}" data-uptd="${u}" aria-pressed="${on}">
         <div class="bar-head">
           <span class="bar-label"><span class="bar-dot" style="background:${color}"></span>${u}</span>
           <span class="bar-count">${n.toLocaleString()}<em>${pct(n)}%</em></span>
         </div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct(n)}%;background:${color}"></div></div>
-      </div>`;
+      </button>`;
     }).join("");
   }
-}
-
-function renderUPTDList() {
-  if (!uptdListEl || !pjuGeoJSON) return;
-  const feats = pjuGeoJSON.features.filter((ft) => {
-    const p = ft.properties;
-    for (const f of config.filterFields) {
-      if (f.type === "multi") continue;
-      if (f.type === "single") {
-        const want = singleSel[f.key];
-        if (want && want !== "all" && p[f.key] !== want) return false;
-      } else {
-        const s = chipSel[f.key];
-        if (s && s.size > 0 && !s.has(p[f.key])) return false;
-      }
-    }
-    return true;
-  });
-  const counts = {};
-  for (const f of feats) {
-    const u = f.properties?.UPTD;
-    counts[u] = (counts[u] || 0) + 1;
-  }
-  // Same structure as the shared .uptd-item used by other modes.
-  uptdListEl.innerHTML = ["UPTD 1", "UPTD 2", "UPTD 3", "UPTD 4"].map((u) => {
-    const active = activeUPTD.has(u);
-    const color = UPTD_COLORS[u] || UPTD_DEFAULT;
-    return `<button class="uptd-item" data-uptd="${u}" role="checkbox" aria-checked="${active}">
-      <span class="uptd-item-check" aria-hidden="true">${active ? "✓" : ""}</span>
-      <span class="uptd-item-dot" style="background:${color}"></span>
-      <span class="uptd-item-name">${u}</span>
-      <span class="uptd-item-count">${(counts[u] || 0).toLocaleString()}</span>
-    </button>`;
-  }).join("");
 }
 
 function renderChips() {
@@ -202,18 +167,18 @@ function renderChips() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // POPUP
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function showPjuPopup(feature) {
   const coords = feature.geometry?.coordinates;
   if (!coords) return;
   showPopup(map, coords, config.popup(feature), { maxWidth: "320px" });
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DOM CREATION
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function buildFilterOptions(key) {
   if (!pjuGeoJSON) return [];
   const vals = new Set();
@@ -274,21 +239,11 @@ function createDOM() {
 
       <section class="panel-section" aria-label="Filter data">
         <div class="section-header" data-collapse="filter">
-          <span class="section-chevron" aria-hidden="true">▸</span>
+          <span class="section-chevron" aria-hidden="true">â–¸</span>
           <h2 class="section-title">Filter Data</h2>
         </div>
         <div class="section-content" data-collapse-target="filter">
           <div class="filter-grid" id="filter-grid"></div>
-        </div>
-      </section>
-
-      <section class="panel-section" id="uptd-section" aria-label="Filter UPTD">
-        <div class="section-header" data-collapse="uptd">
-          <span class="section-chevron" aria-hidden="true">▸</span>
-          <h2 class="section-title">UPTD</h2>
-        </div>
-        <div class="section-content" data-collapse-target="uptd">
-          <div class="uptd-list" id="uptd-list" role="group" aria-label="Daftar UPTD"></div>
         </div>
       </section>
     </div>
@@ -311,7 +266,6 @@ function createDOM() {
   };
   kondBarsEl = document.getElementById("kond-bars");
   uptdBarsEl = document.getElementById("uptd-bars");
-  uptdListEl = document.getElementById("uptd-list");
 
   // Collapsible sections
   panel.querySelectorAll(".section-header[data-collapse]").forEach((header) => {
@@ -397,15 +351,15 @@ function removeDOM() {
   if (legendEl && legendEl.parentNode) legendEl.parentNode.removeChild(legendEl);
   panel = panelHeader = panelBody = panelToggle = sheetHandle = null;
   legendEl = legendContent = badgeEl = null;
-  uptdListEl = kondBarsEl = uptdBarsEl = null;
+  kondBarsEl = uptdBarsEl = null;
   statsEls = {};
   chipContainers = {};
   singleEls = {};
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LAYER ADD / RE-ADD
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function addLayers() {
   if (!map) return;
   if (ruasGeoJSON && !map.getSource("apj-roads")) {
@@ -451,9 +405,9 @@ function fitBounds() {
   if (added) map.fitBounds(bounds, { padding: 40, duration: 800, maxZoom: 12 });
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MODULE EXPORTS
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export const module = {
   async init(ctx) {
     map = ctx.map;
@@ -473,7 +427,7 @@ export const module = {
           Loading.heartbeat?.();
           const pct = total ? Math.round((received / total) * 100) : 0;
           const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data PJU… ${pct}%`;
+          if (st) st.textContent = `Mengunduh data PJUâ€¦ ${pct}%`;
         }
       ),
       loadParquetToGeoJSON(
@@ -483,7 +437,7 @@ export const module = {
           Loading.heartbeat?.();
           const pct = total ? Math.round((received / total) * 100) : 0;
           const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data ruas… ${pct}%`;
+          if (st) st.textContent = `Mengunduh data ruasâ€¦ ${pct}%`;
         }
       ),
     ]);
@@ -503,7 +457,6 @@ export const module = {
     createDOM();
     addLayers();
     updateStats();
-    renderUPTDList();
     renderChips();
 
     // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
@@ -526,7 +479,7 @@ export const module = {
             const c = f.geometry?.coordinates;
             return {
               title: p["Nama Ruas (Resmi)"] || "PJU",
-              subtitle: `${p.Id_Tiang || "-"} · ${p.UPTD || "-"}`,
+              subtitle: `${p.Id_Tiang || "-"} Â· ${p.UPTD || "-"}`,
               action: () => {
                 if (!c) return;
                 map.flyTo({ center: c, zoom: 16, duration: 800, essential: true });
@@ -547,16 +500,16 @@ export const module = {
     map.on("mouseenter", "pju-hitbox", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "pju-hitbox", () => { map.getCanvas().style.cursor = ""; });
 
-    // UPTD multi toggle (event delegation survives re-render)
-    onUptdClick = (e) => {
-      const btn = e.target.closest(".uptd-item");
-      if (!btn) return;
-      const u = btn.dataset.uptd;
+    // UPTD toggle via the stats bars (event delegation survives re-render)
+    onUptdBarClick = (e) => {
+      const bar = e.target.closest(".uptd-bar");
+      if (!bar) return;
+      const u = bar.dataset.uptd;
       if (activeUPTD.has(u)) activeUPTD.delete(u);
       else activeUPTD.add(u);
       applyFilters();
     };
-    uptdListEl.addEventListener("click", onUptdClick);
+    uptdBarsEl.addEventListener("click", onUptdBarClick);
 
     styleLoadHandler = () => { reAddLayers(); };
     map.on("style.load", styleLoadHandler);
@@ -571,7 +524,7 @@ export const module = {
     if (styleLoadHandler) { map.off("style.load", styleLoadHandler); styleLoadHandler = null; }
     if (basemapChangedHandler) { map.off("basemap-changed", basemapChangedHandler); basemapChangedHandler = null; }
     if (pjuHitboxClickHandler) { map.off("click", "pju-hitbox", pjuHitboxClickHandler); pjuHitboxClickHandler = null; }
-    if (onUptdClick && uptdListEl) { uptdListEl.removeEventListener("click", onUptdClick); onUptdClick = null; }
+    if (onUptdBarClick && uptdBarsEl) { uptdBarsEl.removeEventListener("click", onUptdBarClick); onUptdBarClick = null; }
     for (const { el, h } of chipHandlers) {
       el.removeEventListener("click", h);
     }

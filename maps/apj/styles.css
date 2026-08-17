@@ -221,6 +221,27 @@ body.light .bar-track { background: rgba(15, 23, 42, 0.07); }
   transition: width 300ms ease;
 }
 
+/* ── UPTD bars = clickable toggle buttons ─────────────────── */
+#uptd-bars { display: flex; flex-direction: column; gap: 8px; }
+.uptd-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 150ms ease;
+}
+.uptd-bar:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+.uptd-bar.on { border-color: rgba(124, 58, 237, 0.45); }
+.uptd-bar:not(.on) { opacity: 0.45; }
+.uptd-bar:not(.on) .bar-fill { opacity: 0.35; }
+
 /* ── Filter grid (multi-attribute chips) ──────────────────── */
 .filter-grid {
   display: flex;
