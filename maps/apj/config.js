@@ -107,7 +107,9 @@ export default {
     const uptd = UPTD_COLORS[p.UPTD] ? `<span style="color:${UPTD_COLORS[p.UPTD]};font-weight:700;">${escHtml(p.UPTD || "-")}</span>` : escHtml(p.UPTD || "-");
     return `<div>
       <b style="font-size:14px;">${escHtml(p["Nama Ruas (Resmi)"] || "APJ")}</b><br/>
-      <span style="color:#94a3b8;">${escHtml(p["Id_Tiang"] || "")}</span><br/><br/>
+      <span style="color:#94a3b8;">${escHtml(p.Id_Tiang || "")}</span><br/>
+      ${p.Id_Tiang_By_Konsultan ? `<span style="color:#64748b;font-size:11px;">ID konsultan: ${escHtml(p.Id_Tiang_By_Konsultan)}</span><br/>` : ""}
+      <br/>
       <b>UPTD:</b> ${uptd}<br/>
       <b>Kab/Kota:</b> ${escHtml(p["Kabupaten/Kota"] || "-")}<br/>
       <b>Kondisi:</b> ${kond}<br/>

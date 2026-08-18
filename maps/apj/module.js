@@ -490,14 +490,15 @@ export const module = {
             const p = f.properties;
             if (!p) return false;
             return String(p["Nama Ruas (Resmi)"] || "").toLowerCase().includes(term) ||
-              String(p.Id_Tiang || "").toLowerCase().includes(term);
+              String(p.Id_Tiang || "").toLowerCase().includes(term) ||
+              String(p.Id_Tiang_By_Konsultan || "").toLowerCase().includes(term);
           }).slice(0, 12);
           return matches.map((f) => {
             const p = f.properties;
             const c = f.geometry?.coordinates;
             return {
               title: p["Nama Ruas (Resmi)"] || "APJ",
-              subtitle: `${p.Id_Tiang || "-"} Â· ${p.UPTD || "-"}`,
+              subtitle: `${p.Id_Tiang || p.Id_Tiang_By_Konsultan || "-"} · ${p.UPTD || "-"}`,
               action: () => {
                 if (!c) return;
                 map.flyTo({ center: c, zoom: 16, duration: 800, essential: true });

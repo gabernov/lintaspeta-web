@@ -95,6 +95,7 @@ export default {
     return `<div style="max-width:300px;">
       <b style="font-size:14px;">${escHtml(p.nama_ruas || "Rambu")}</b><br/>
       <span class="${kelasBadge}">Kelas ${escHtml(kelas)}</span>
+      ${p.rambu_id ? `<span style="color:#64748b;font-size:11px;"> · ${escHtml(p.rambu_id)}</span>` : ""}
       <br/><br/>
       <b>Kode Ruas:</b> ${escHtml(p.kode_ruas || "N/A")}<br/>
       <b>Nama:</b> ${escHtml(p.nama_ruas || "N/A")}<br/>
