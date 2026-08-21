@@ -122,21 +122,6 @@
         letter-spacing="0.28">LintasPeta</text>
 </svg>
 
-<!-- Loading overlay — outside #map so z-index:100 covers ALL UI.
-     #load-warning shows a "slow connection" hint after a stage stalls;
-     #load-error + #load-retry flip the overlay into a recoverable
-     stuck state (pointer-events re-enabled via .is-error). -->
-<div id="loading">
-  <div class="spinner-box">
-    <div class="spinner"></div>
-    <div>Loading map core...</div>
-    <div class="status" id="load-status"></div>
-    <div class="warning" id="load-warning"></div>
-    <div class="error" id="load-error"></div>
-    <button type="button" id="load-retry" style="display:none;">Muat Ulang</button>
-  </div>
-</div>
-
 <!-- Mini loading pill — top-center of the map. Shown while mode data
      streams in the background after the globe fly-in; never blocks
      interaction. -->
@@ -153,7 +138,7 @@
 
 <script type="module">
   import { Registry, setPostInitFn } from "./shared-core/js/registry.js";
-  import { initMap, addStarfield, setBasemap, flyToGlobe, flyToJabar, layoutTopLeftControls, waitForMapReady } from "./shared-core/js/map-core.js";
+  import { initMap, addStarfield, setBasemap, flyToGlobe, flyToJabar, layoutTopLeftControls } from "./shared-core/js/map-core.js";
   import { toast, Loading, PanelSkeleton, registerSearch } from "./shared-core/js/ui-core.js";
 
   const $ = id => document.getElementById(id);
@@ -200,35 +185,17 @@
   }
 
   // ═══════════════════════════════════════════════════════════
-  // STEP 3: INIT MAP + LOADING OVERLAY + STARFIELD
-  // Loading screen stays up until map, tiles AND stars are fully
-  // rendered (globe projection + starfield layer + milkyway texture).
-  // Each phase re-arms the watchdog so the overlay always tells the
-  // user what is happening (and flips to "stuck" + retry if a phase
-  // stalls).
+  // STEP 3: INIT MAP + STARFIELD
+  // Fullscreen loading is retired — the panel skeleton is the
+  // first-load indicator while globe, stars and data stream in.
   // ═══════════════════════════════════════════════════════════
   const map = initMap({ container: "map" });
 
-  Loading.setStage();
-  $("load-status").textContent = "Memuat peta…";
-  await waitForMapReady(map);
-
-  $("load-status").textContent = "Memuat bintang (texture bima sakti)…";
-  await addStarfield(map);
-
-  $("load-status").textContent = "Menyelesaikan render…";
-  await waitForMapReady(map);
-
-  Loading.clearStage();
-  $("loading").classList.add("hidden");
-  $("load-status").textContent = "";
+  PanelSkeleton.show();
+  addStarfield(map);
 
   layoutTopLeftControls();
   window.addEventListener("resize", layoutTopLeftControls);
-
-  // Retry button: full page reload is the simplest reliable recovery
-  // for a stalled first load (network, WASM, or texture fetch).
-  $("load-retry").addEventListener("click", () => location.reload());
 
   Registry.ctx = {
     map,

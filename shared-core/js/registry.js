@@ -58,25 +58,12 @@ export const Registry = {
       return;
     }
 
-    // On the FIRST activate the shell has already rendered globe + stars
-    // (its own overlay covered that wait), so no fullscreen spinner and
-    // no globe round-trip — go straight to the Jawa Barat fly-in.
-    // On later switches the brief fullscreen overlay covers the
-    // zoom-out-to-globe transition, as designed.
+    // Fullscreen loading is retired: mode switches play the zoom-out
+    // and fly-in live while the panel skeleton covers the panel swap.
+    // Skipped on the first activate — the map already starts at globe.
     const firstActivate = !this._hasActivated;
-    if (!firstActivate) {
-      if (this.ctx?.ui?.Loading?.show) {
-        this.ctx.ui.Loading.show(`Memuat ${mode.title || id}…`);
-      }
-      if (this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
-        await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
-      }
-
-      // Globe + stars must render before the overlay hides.
-      if (this.ctx?.map && typeof this.ctx.addStarfield === "function") {
-        await this.ctx.addStarfield(this.ctx.map);
-      }
-      this._hideLoading();
+    if (!firstActivate && this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
+      await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
 
     // Fly to Jawa Barat (cinematic, no data dependency).
