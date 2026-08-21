@@ -193,6 +193,43 @@ export function initMap({ container }) {
   return map;
 }
 // ═══════════════════════════════════════════════════════════
+// JAWA BARAT FLY-TO
+// ═══════════════════════════════════════════════════════════
+// Hardcoded center of Jawa Barat — used for the cinematic fly-in
+// after the globe + stars are ready. Independent of data loading.
+export const JABAR_CENTER = [107.6, -6.9];
+
+export function flyToJabar(map, opts = {}) {
+  if (!map) return Promise.resolve();
+  const duration = opts.duration ?? 2000;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      map.off("moveend", onEnd);
+      resolve();
+    };
+    const onEnd = () => finish();
+    map.on("moveend", onEnd);
+    try {
+      map.flyTo({
+        center: JABAR_CENTER,
+        zoom: 10,
+        pitch: 0,
+        bearing: 0,
+        duration,
+        essential: true,
+      });
+    } catch (e) {
+      finish();
+    }
+    // Safety fallback
+    setTimeout(finish, duration + 300);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // GLOBE-SAFE CAMERA
 // ═══════════════════════════════════════════════════════════
 // map.fitBounds() / cameraForBounds() are unreliable in the globe

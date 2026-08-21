@@ -145,7 +145,7 @@
 
 <script type="module">
   import { Registry, setPostInitFn } from "./shared-core/js/registry.js";
-  import { initMap, addStarfield, setBasemap, flyToGlobe, layoutTopLeftControls, waitForMapReady } from "./shared-core/js/map-core.js";
+  import { initMap, addStarfield, setBasemap, flyToGlobe, flyToJabar, layoutTopLeftControls, waitForMapReady } from "./shared-core/js/map-core.js";
   import { toast, Loading, PanelSkeleton, registerSearch } from "./shared-core/js/ui-core.js";
 
   const $ = id => document.getElementById(id);
@@ -227,6 +227,8 @@
     ui: { toast, Loading, PanelSkeleton },
     search: { registerSearch },
     flyToGlobe,
+    flyToJabar,
+    addStarfield,
     getBasemapStyle: () => currentBasemap,
     setBasemap: (styleName) => {
       if (getBasemapStyle() === styleName) return Promise.resolve();

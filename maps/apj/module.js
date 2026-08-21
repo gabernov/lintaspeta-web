@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { showPopup, closePopup } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config, { UPTD_COLORS, KONDISI_COLORS, UPTD_DEFAULT } from "./config.js";
 
 export { config };
@@ -426,91 +426,71 @@ function fitBounds() {
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 // ═══════════════════════════════════════════════════════════
+async function loadParquetData(ctx) {
+  await initParquet();
+
+  const pjuUrl = new URL("data/pju_detail.parquet", import.meta.url);
+  const ruasUrl = new URL("data/ruas_apj.parquet", import.meta.url);
+
+  const [pjuResult, ruasResult] = await Promise.allSettled([
+    loadParquetToGeoJSON(pjuUrl),
+    loadParquetToGeoJSON(ruasUrl),
+  ]);
+
+  if (pjuResult.status === "fulfilled") pjuGeoJSON = pjuResult.value;
+  else console.error("Failed to load PJU:", pjuResult.reason);
+  if (ruasResult.status === "fulfilled") ruasGeoJSON = ruasResult.value;
+  else console.error("Failed to load ruas:", ruasResult.reason);
+
+  if (!pjuGeoJSON) {
+    toast("Gagal memuat data APJ");
+    return;
+  }
+
+  addLayers();
+  updateStats();
+  renderChips();
+
+  if (ctx?.search?.registerSearch && pjuGeoJSON) {
+    ctx.search.registerSearch({
+      placeholder: "Cari ruas / ID tiang APJ...",
+      onQuery: async (q) => {
+        const term = q.toLowerCase();
+        const matches = pjuGeoJSON.features.filter((f) => {
+          const p = f.properties;
+          if (!p) return false;
+          return String(p["Nama Ruas (Resmi)"] || "").toLowerCase().includes(term) ||
+            String(p.Id_Tiang || "").toLowerCase().includes(term) ||
+            String(p.Id_Tiang_By_Konsultan || "").toLowerCase().includes(term);
+        }).slice(0, 12);
+        return matches.map((f) => {
+          const p = f.properties;
+          const c = f.geometry?.coordinates;
+          return {
+            title: p["Nama Ruas (Resmi)"] || "APJ",
+            subtitle: `${p.Id_Tiang || p.Id_Tiang_By_Konsultan || "-"} · ${p.UPTD || "-"}`,
+            action: () => {
+              if (!c) return;
+              map.flyTo({ center: c, zoom: 16, duration: 800, essential: true });
+              showPjuPopup(f);
+            },
+          };
+        });
+      },
+    });
+  }
+
+  setTimeout(fitBounds, 500);
+}
+
 export const module = {
   async init(ctx) {
     map = ctx.map;
 
-    Loading.show("Loading data...");
-    Loading.setStage?.(30000, 90000);
-    await initParquet();
-
-    const pjuUrl = new URL("data/pju_detail.parquet", import.meta.url);
-    const ruasUrl = new URL("data/ruas_apj.parquet", import.meta.url);
-
-    const [pjuResult, ruasResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(
-        pjuUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data APJ… ${pct}%`;
-        }
-      ),
-      loadParquetToGeoJSON(
-        ruasUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data ruas… ${pct}%`;
-        }
-      ),
-    ]);
-
-    if (pjuResult.status === "fulfilled") pjuGeoJSON = pjuResult.value;
-    else console.error("Failed to load PJU:", pjuResult.reason);
-    if (ruasResult.status === "fulfilled") ruasGeoJSON = ruasResult.value;
-    else console.error("Failed to load ruas:", ruasResult.reason);
-
-    Loading.hide();
-
-    if (!pjuGeoJSON) {
-      toast("Gagal memuat data APJ");
-      return;
-    }
-
     createDOM();
-    addLayers();
-    updateStats();
     renderChips();
-
-    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
 
-    // Search: PJU by ruas / tiang id
-    if (ctx?.search?.registerSearch && pjuGeoJSON) {
-      ctx.search.registerSearch({
-        placeholder: "Cari ruas / ID tiang APJ...",
-        onQuery: async (q) => {
-          const term = q.toLowerCase();
-          const matches = pjuGeoJSON.features.filter((f) => {
-            const p = f.properties;
-            if (!p) return false;
-            return String(p["Nama Ruas (Resmi)"] || "").toLowerCase().includes(term) ||
-              String(p.Id_Tiang || "").toLowerCase().includes(term) ||
-              String(p.Id_Tiang_By_Konsultan || "").toLowerCase().includes(term);
-          }).slice(0, 12);
-          return matches.map((f) => {
-            const p = f.properties;
-            const c = f.geometry?.coordinates;
-            return {
-              title: p["Nama Ruas (Resmi)"] || "APJ",
-              subtitle: `${p.Id_Tiang || p.Id_Tiang_By_Konsultan || "-"} · ${p.UPTD || "-"}`,
-              action: () => {
-                if (!c) return;
-                map.flyTo({ center: c, zoom: 16, duration: 800, essential: true });
-                showPjuPopup(f);
-              },
-            };
-          });
-        },
-      });
-    }
-
-    // Events
     pjuHitboxClickHandler = (e) => {
       const feature = e.features?.[0];
       if (feature) showPjuPopup(feature);
@@ -519,7 +499,6 @@ export const module = {
     map.on("mouseenter", "pju-hitbox", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "pju-hitbox", () => { map.getCanvas().style.cursor = ""; });
 
-    // UPTD toggle via the stats bars (event delegation survives re-render)
     onUptdBarClick = (e) => {
       const bar = e.target.closest(".uptd-bar");
       if (!bar) return;
@@ -530,7 +509,6 @@ export const module = {
     };
     uptdBarsEl.addEventListener("click", onUptdBarClick);
 
-    // Kondisi toggle via the stats bars (event delegation survives re-render)
     onKondBarClick = (e) => {
       const bar = e.target.closest(".kond-bar");
       if (!bar) return;
@@ -546,7 +524,7 @@ export const module = {
     basemapChangedHandler = () => { reAddLayers(); };
     map.on("basemap-changed", basemapChangedHandler);
 
-    setTimeout(fitBounds, 500);
+    loadParquetData(ctx);
   },
 
   teardown() {

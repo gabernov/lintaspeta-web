@@ -67,10 +67,24 @@ export const Registry = {
       await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
 
-    // 2. Teardown current mode
+    // 2. Wait for starfield to be ready (globe projection + stars must
+    //    render before we hide the overlay and fly to Jawa Barat).
+    if (this.ctx?.map && typeof this.ctx.addStarfield === "function") {
+      await this.ctx.addStarfield(this.ctx.map);
+    }
+
+    // 3. Hide loading overlay — globe + stars are now visible.
+    this._hideLoading();
+
+    // 4. Fly to Jawa Barat (cinematic, no data dependency).
+    if (this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
+      await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
+    }
+
+    // 5. Teardown current mode
     await this.teardown();
 
-    // 3. Set active
+    // 6. Set active
     this.currentId = id;
     this._closeMenu();
 
@@ -84,7 +98,7 @@ export const Registry = {
       this.ctx.ui.PanelSkeleton.show();
     }
 
-    // 4. Toggle active class on menu mode rows
+    // 7. Toggle active class on menu mode rows
     document.querySelectorAll("#menu-panel .mode-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.mode === id);
     });
@@ -92,7 +106,7 @@ export const Registry = {
     // Update document title
     document.title = mode.title ? `${mode.title} — LintasPeta` : "LintasPeta";
 
-    // 5. Load module
+    // 8. Load module (non-blocking: UI creates immediately, data loads in background)
     let config = null;
     let module = null;
     try {
@@ -102,11 +116,10 @@ export const Registry = {
     } catch (err) {
       console.warn(`Registry: mode "${id}" load failed (expected in Phase 0):`, err);
       this._toast(`Mode ${mode.title || id} belum dimigrasi (Phase 0)`);
-      this._hideLoading();
       return;
     }
 
-    // 6. Apply the mode's default basemap BEFORE init so layers are
+    // 9. Apply the mode's default basemap BEFORE init so layers are
     //    added to the correct style and fitBounds isn't interrupted.
     //    Skipped on the very first activate: the shell has already set
     //    the theme-matched basemap, forcing the mode default here would
@@ -126,18 +139,16 @@ export const Registry = {
       }
     }
 
-    // 7. Init module
+    // 10. Init module — UI creates immediately, parquet loads in background
     if (module && typeof module.init === "function") {
       const { map, ui, search } = this.ctx || {};
       if (!map) {
         console.warn("Registry: no map in ctx — cannot init mode");
-        this._hideLoading();
         return;
       }
-      // Re-arm the watchdog: module.init() may download + parse
-      // parquet files (multi-MB), which is the longest user-visible wait.
-      this.ctx.ui?.Loading?.setStage?.(30000, 90000);
       try {
+        // module.init() should return quickly (createUI) and load data async.
+        // No loading overlay — user already sees globe + stars + fly-to.
         await module.init({ map, data: null, config, ui, search });
         this._loaded = { module, config };
       } catch (err) {
@@ -149,8 +160,6 @@ export const Registry = {
     if (postInitFn && this.ctx?.map) {
       await postInitFn(this.ctx.map);
     }
-
-    this._hideLoading(id);
   },
 
   _hideLoading(ownerId) {

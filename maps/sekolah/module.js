@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -907,121 +907,98 @@ function setupCollapsible() {
 
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
+async function loadParquetData(ctx) {
+  await initParquet();
+  const roadsUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
+  const schoolsUrl = new URL('data/sekolah_merged.parquet', import.meta.url);
+
+  const [roadsResult, schoolsResult] = await Promise.allSettled([
+    loadParquetToGeoJSON(roadsUrl),
+    loadParquetToGeoJSON(schoolsUrl)
+  ]);
+
+  if (roadsResult.status === "fulfilled") {
+    roadsGeoJSON = roadsResult.value;
+  } else {
+    console.error("Failed to load roads:", roadsResult.reason);
+  }
+
+  if (schoolsResult.status === "fulfilled") {
+    schoolsGeoJSON = schoolsResult.value;
+  } else {
+    console.error("Failed to load schools:", schoolsResult.reason);
+  }
+
+  if (roadsGeoJSON) addRoadsLayer();
+  if (schoolsGeoJSON) addSchoolsLayer();
+  showUI();
+  updateStats();
+
+  if (roadsGeoJSON && schoolsGeoJSON) {
+    fileDrop.classList.add("loaded");
+    fileStatus.className = "status ok";
+    fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} roads, ${schoolsGeoJSON.features.length} schools`;
+    setTimeout(() => {
+      try {
+        const bounds = new maplibregl.LngLatBounds();
+        const valid = (c) => c && isFinite(c[0]) && isFinite(c[1]) && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
+        schoolsGeoJSON.features.forEach(f => {
+          const c = f.geometry?.coordinates;
+          if (c && valid(c)) bounds.extend(c);
+        });
+        if (roadsGeoJSON) roadsGeoJSON.features.forEach(f => {
+          const flat = f.geometry?.coordinates?.flat(2);
+          if (flat) for (let i = 0; i + 1 < flat.length; i += 2) {
+            if (valid([flat[i], flat[i + 1]])) bounds.extend([flat[i], flat[i + 1]]);
+          }
+        });
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 60, minZoom: 9, maxZoom: 12, duration: 2000 });
+        }
+      } catch (e) {
+        console.error("Fly-to error:", e);
+      }
+    }, 500);
+  }
+
+  if (ctx?.search?.registerSearch && schoolsGeoJSON) {
+    ctx.search.registerSearch({
+      placeholder: "Cari sekolah / NPSN...",
+      onQuery: async (q) => {
+        const term = q.toLowerCase();
+        const matches = schoolsGeoJSON.features.filter(f => {
+          const nama = String(f.properties["NAMA SEKOLAH"] || "").toLowerCase();
+          const npsn = String(f.properties.NPSN || "");
+          return nama.includes(term) || npsn.includes(q);
+        }).slice(0, 8);
+        return matches.map(f => {
+          const p = f.properties;
+          const c = f.geometry?.coordinates;
+          return {
+            title: p["NAMA SEKOLAH"] || "Sekolah",
+            subtitle: `${p.Jenjang || ""} · ${p.KABUPATEN || ""} · NPSN ${p.NPSN || "-"}`,
+            action: () => {
+              if (!c) return;
+              map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
+              showPopup(map, c, config.popup(f), { maxWidth: "320px" });
+            },
+          };
+        });
+      },
+    });
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 export const module = {
   async init(ctx) {
     map = ctx.map;
 
-    Loading.show("Loading data...");
-    Loading.setStage?.(30000, 90000);
-    await initParquet();
-    const roadsUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
-    const schoolsUrl = new URL('data/sekolah_merged.parquet', import.meta.url);
-
-    const [roadsResult, schoolsResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(
-        roadsUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data jalan… ${pct}%`;
-        }
-      ),
-      loadParquetToGeoJSON(
-        schoolsUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data sekolah… ${pct}%`;
-        }
-      )
-    ]);
-
-    if (roadsResult.status === "fulfilled") {
-      roadsGeoJSON = roadsResult.value;
-    } else {
-      console.error("Failed to load roads:", roadsResult.reason);
-    }
-
-    if (schoolsResult.status === "fulfilled") {
-      schoolsGeoJSON = schoolsResult.value;
-    } else {
-      console.error("Failed to load schools:", schoolsResult.reason);
-    }
-
-    Loading.hide();
-
     createDOM();
-    if (roadsGeoJSON) addRoadsLayer();
-    if (schoolsGeoJSON) addSchoolsLayer();
-    showUI();
-    updateStats();
     setupFilters();
     setupDragDrop();
     setupCollapsible();
-    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
-
-    // Shared searchbar: search schools by name / NPSN
-    if (ctx?.search?.registerSearch && schoolsGeoJSON) {
-      ctx.search.registerSearch({
-        placeholder: "Cari sekolah / NPSN...",
-        onQuery: async (q) => {
-          const term = q.toLowerCase();
-          const matches = schoolsGeoJSON.features.filter(f => {
-            const nama = String(f.properties["NAMA SEKOLAH"] || "").toLowerCase();
-            const npsn = String(f.properties.NPSN || "");
-            return nama.includes(term) || npsn.includes(q);
-          }).slice(0, 8);
-          return matches.map(f => {
-            const p = f.properties;
-            const c = f.geometry?.coordinates;
-            return {
-              title: p["NAMA SEKOLAH"] || "Sekolah",
-              subtitle: `${p.Jenjang || ""} · ${p.KABUPATEN || ""} · NPSN ${p.NPSN || "-"}`,
-              action: () => {
-                if (!c) return;
-                map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
-                showPopup(map, c, config.popup(f), { maxWidth: "320px" });
-              },
-            };
-          });
-        },
-      });
-    }
-
-    if (roadsGeoJSON && schoolsGeoJSON) {
-      fileDrop.classList.add("loaded");
-      fileStatus.className = "status ok";
-      fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} roads, ${schoolsGeoJSON.features.length} schools`;
-
-      // Fly from globe view to data bounds
-      setTimeout(() => {
-        try {
-          const bounds = new maplibregl.LngLatBounds();
-          const valid = (c) => c && isFinite(c[0]) && isFinite(c[1]) && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
-          schoolsGeoJSON.features.forEach(f => {
-            const c = f.geometry?.coordinates;
-            if (c && valid(c)) bounds.extend(c);
-          });
-          if (roadsGeoJSON) roadsGeoJSON.features.forEach(f => {
-            const flat = f.geometry?.coordinates?.flat(2);
-            if (flat) for (let i = 0; i + 1 < flat.length; i += 2) {
-              if (valid([flat[i], flat[i + 1]])) bounds.extend([flat[i], flat[i + 1]]);
-            }
-          });
-          if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { padding: 60, minZoom: 9, maxZoom: 12, duration: 2000 });
-          }
-        } catch (e) {
-          console.error("Fly-to error:", e);
-        }
-      }, 500);
-    }
 
     styleLoadHandler = () => {
       if (!map.getSource("roads") || !map.getSource("schools")) {
@@ -1033,6 +1010,8 @@ export const module = {
       if (!map.getSource("roads") || !map.getSource("schools")) reAddLayers();
     };
     map.on("basemap-changed", basemapChangedHandler);
+
+    loadParquetData(ctx);
   },
 
   teardown() {

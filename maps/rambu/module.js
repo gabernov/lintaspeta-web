@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, showPopup, closePopup } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -572,6 +572,83 @@ function setupDragDrop() {
   document.body.addEventListener("drop", dropHandler);
 }
 
+async function loadParquetData(ctx) {
+  await initParquet();
+
+  const jaringanUrl = new URL('data/jaringan_jalan.parquet', import.meta.url);
+  const rambuUrl = new URL('data/rambu_kelas_jalan.parquet', import.meta.url);
+  const ruasUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
+
+  const [jaringanResult, rambuResult, ruasResult] = await Promise.allSettled([
+    loadParquetToGeoJSON(jaringanUrl),
+    loadParquetToGeoJSON(rambuUrl),
+    loadParquetToGeoJSON(ruasUrl)
+  ]);
+
+  if (jaringanResult.status === "fulfilled") {
+    jaringanGeoJSON = jaringanResult.value;
+  } else {
+    console.error("Failed to load jaringan:", jaringanResult.reason);
+  }
+
+  if (rambuResult.status === "fulfilled") {
+    rambuGeoJSON = rambuResult.value;
+  } else {
+    console.error("Failed to load rambu:", rambuResult.reason);
+  }
+
+  if (ruasResult.status === "fulfilled") {
+    ruasGeoJSON = ruasResult.value;
+  } else {
+    console.error("Failed to load ruas:", ruasResult.reason);
+  }
+
+  addJaringanLayer();
+  addRuasLayer();
+  addRambuLayer();
+  showUI();
+  updateStats();
+
+  if (jaringanGeoJSON && rambuGeoJSON && ruasGeoJSON) {
+    fileDrop.classList.add("loaded");
+    fileStatus.className = "status ok";
+    const parts = [
+      `${jaringanGeoJSON.features.length} jaringan`,
+      `${rambuGeoJSON.features.length} rambu`,
+      `${ruasGeoJSON.features.length} ruas`
+    ];
+    fileStatus.textContent = `Auto-loaded ${parts.join(", ")}`;
+    setTimeout(() => fitBounds(), 500);
+  }
+
+  if (ctx?.search?.registerSearch && rambuGeoJSON) {
+    ctx.search.registerSearch({
+      placeholder: "Cari rambu / kode ruas...",
+      onQuery: async (q) => {
+        const term = q.toLowerCase();
+        const matches = rambuGeoJSON.features.filter(f => {
+          const nama = String(f.properties.nama_ruas || "").toLowerCase();
+          const kode = String(f.properties.kode_ruas || "").toLowerCase();
+          return nama.includes(term) || kode.includes(term);
+        }).slice(0, 8);
+        return matches.map(f => {
+          const p = f.properties;
+          const c = f.geometry?.coordinates;
+          return {
+            title: p.nama_ruas || "Rambu",
+            subtitle: `Kode ${p.kode_ruas || "-"} · Kelas ${p.kelas_jalan || "-"}`,
+            action: () => {
+              if (!c) return;
+              map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
+              showPopup(map, c, config.popup(f), { maxWidth: "320px" });
+            },
+          };
+        });
+      },
+    });
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 // ═══════════════════════════════════════════════════════════
@@ -579,121 +656,10 @@ export const module = {
   async init(ctx) {
     map = ctx.map;
 
-    Loading.show("Loading data...");
-    Loading.setStage?.(30000, 90000);
-    await initParquet();
-
-    const jaringanUrl = new URL('data/jaringan_jalan.parquet', import.meta.url);
-    const rambuUrl = new URL('data/rambu_kelas_jalan.parquet', import.meta.url);
-    const ruasUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
-
-    const [jaringanResult, rambuResult, ruasResult] = await Promise.allSettled([
-      loadParquetToGeoJSON(
-        jaringanUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data jaringan… ${pct}%`;
-        }
-      ),
-      loadParquetToGeoJSON(
-        rambuUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data rambu… ${pct}%`;
-        }
-      ),
-      loadParquetToGeoJSON(
-        ruasUrl,
-        () => Loading.heartbeat?.(),
-        (received, total) => {
-          Loading.heartbeat?.();
-          const pct = total ? Math.round((received / total) * 100) : 0;
-          const st = document.getElementById("load-status");
-          if (st) st.textContent = `Mengunduh data ruas… ${pct}%`;
-        }
-      )
-    ]);
-
-    if (jaringanResult.status === "fulfilled") {
-      jaringanGeoJSON = jaringanResult.value;
-    } else {
-      console.error("Failed to load jaringan:", jaringanResult.reason);
-    }
-
-    if (rambuResult.status === "fulfilled") {
-      rambuGeoJSON = rambuResult.value;
-    } else {
-      console.error("Failed to load rambu:", rambuResult.reason);
-    }
-
-    if (ruasResult.status === "fulfilled") {
-      ruasGeoJSON = ruasResult.value;
-    } else {
-      console.error("Failed to load ruas:", ruasResult.reason);
-    }
-
-    Loading.hide();
-
     createDOM();
-    addJaringanLayer();
-    addRuasLayer();
-    addRambuLayer();
-    showUI();
-    updateStats();
     setupFilters();
     setupDragDrop();
-    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
-
-    // Shared searchbar: search rambu by kode_ruas / nama_ruas
-    if (ctx?.search?.registerSearch && rambuGeoJSON) {
-      ctx.search.registerSearch({
-        placeholder: "Cari rambu / kode ruas...",
-        onQuery: async (q) => {
-          const term = q.toLowerCase();
-          const matches = rambuGeoJSON.features.filter(f => {
-            const nama = String(f.properties.nama_ruas || "").toLowerCase();
-            const kode = String(f.properties.kode_ruas || "").toLowerCase();
-            return nama.includes(term) || kode.includes(term);
-          }).slice(0, 8);
-          return matches.map(f => {
-            const p = f.properties;
-            const c = f.geometry?.coordinates;
-            return {
-              title: p.nama_ruas || "Rambu",
-              subtitle: `Kode ${p.kode_ruas || "-"} · Kelas ${p.kelas_jalan || "-"}`,
-              action: () => {
-                if (!c) return;
-                map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
-                showPopup(map, c, config.popup(f), { maxWidth: "320px" });
-              },
-            };
-          });
-        },
-      });
-    }
-
-    if (jaringanGeoJSON && rambuGeoJSON && ruasGeoJSON) {
-      fileDrop.classList.add("loaded");
-      fileStatus.className = "status ok";
-      const parts = [
-        `${jaringanGeoJSON.features.length} jaringan`,
-        `${rambuGeoJSON.features.length} rambu`,
-        `${ruasGeoJSON.features.length} ruas`
-      ];
-      fileStatus.textContent = `Auto-loaded ${parts.join(", ")}`;
-
-      // Fly to data bounds
-      setTimeout(() => {
-        fitBounds();
-      }, 500);
-    }
 
     styleLoadHandler = () => {
       if (!map.getSource("arteri") || !map.getSource("kolektor") || !map.getSource("ruas") || !map.getSource("rambu")) {
@@ -707,6 +673,8 @@ export const module = {
       }
     };
     map.on("basemap-changed", basemapChangedHandler);
+
+    loadParquetData(ctx);
   },
 
   teardown() {

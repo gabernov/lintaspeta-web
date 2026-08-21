@@ -1,6 +1,6 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, Loading, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import config from "./config.js";
 
 export { config };
@@ -1006,54 +1006,43 @@ function setupDragDrop() {
 
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
+async function loadParquetData(ctx) {
+  await initParquet();
+  const dataUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
+  roadsGeoJSON = await loadParquetToGeoJSON(dataUrl);
+
+  addRoadsLayer();
+  showUI();
+  updateStats();
+
+  fileDrop.classList.add("file-drop-zone--loaded");
+  fileStatus.className = "file-status file-status--success";
+  fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} ruas jalan`;
+
+  const b = new maplibregl.LngLatBounds();
+  const validCoord = (c) => c && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
+  for (const f of roadsGeoJSON.features) {
+    const flat = f.geometry.coordinates.flat(2);
+    for (let i = 0; i + 1 < flat.length; i += 2) {
+      if (validCoord([flat[i], flat[i + 1]])) b.extend([flat[i], flat[i + 1]]);
+    }
+  }
+  if (!b.isEmpty()) {
+    setTimeout(() => {
+      map.fitBounds(b, { padding: 60, minZoom: 9, maxZoom: 13, duration: 4500, essential: true });
+    }, 1500);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 export const module = {
   async init(ctx) {
     map = ctx.map;
 
-    Loading.show("Loading data...");
-    Loading.setStage?.(30000, 90000);
-    await initParquet();
-    const dataUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
-    roadsGeoJSON = await loadParquetToGeoJSON(
-      dataUrl,
-      () => Loading.heartbeat?.(),
-      (received, total) => {
-        Loading.heartbeat?.();
-        const pct = total ? Math.round((received / total) * 100) : 0;
-        const st = document.getElementById("load-status");
-        if (st) st.textContent = `Mengunduh data jalan… ${pct}%`;
-      }
-    );
-    Loading.hide();
-
     createDOM();
-    addRoadsLayer();
-    showUI();
-    updateStats();
     setupSearch();
     setupDragDrop();
-    // Shared bottom sheet: toggle + swipe-to-open/collapse on mobile.
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
-
-    fileDrop.classList.add("file-drop-zone--loaded");
-    fileStatus.className = "file-status file-status--success";
-    fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} ruas jalan`;
-
-    // Dramatic intro fly-to (faithful to source)
-    const b = new maplibregl.LngLatBounds();
-    const validCoord = (c) => c && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
-    for (const f of roadsGeoJSON.features) {
-      const flat = f.geometry.coordinates.flat(2);
-      for (let i = 0; i + 1 < flat.length; i += 2) {
-        if (validCoord([flat[i], flat[i + 1]])) b.extend([flat[i], flat[i + 1]]);
-      }
-    }
-    if (!b.isEmpty()) {
-      setTimeout(() => {
-        map.fitBounds(b, { padding: 60, minZoom: 9, maxZoom: 13, duration: 4500, essential: true });
-      }, 1500);
-    }
 
     styleLoadHandler = () => {
       if (!map.getSource('roads')) {
@@ -1065,6 +1054,8 @@ export const module = {
       if (!map.getSource('roads')) reAddLayers();
     };
     map.on('basemap-changed', basemapChangedHandler);
+
+    loadParquetData(ctx);
   },
 
   teardown() {
