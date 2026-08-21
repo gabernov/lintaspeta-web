@@ -89,6 +89,41 @@ button:active, .mode-btn:active, .filter-btn:active,
   box-shadow: 0 0 0 2px rgba(37,99,235,0.4);
 }
 
+/* Mini loading pill — top-center, non-blocking hint for background
+   data loading after the globe fly-in. */
+#load-mini {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #F8FAFC;
+  font-size: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+#load-mini.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+#load-mini .mini-spin {
+  width: 12px; height: 12px; flex: none;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #2563EB;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* Drop overlay */
 #drop-overlay {
   display: none; position: fixed; inset: 0; z-index: 1000;
@@ -974,6 +1009,15 @@ body.light #loading .spinner {
 }
 body.light #loading .status {
   color: #64748B;
+}
+body.light #load-mini {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1E293B;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+body.light #load-mini .mini-spin {
+  border-color: #E2E8F0;
+  border-top-color: #2563EB;
 }
 body.light #drop-overlay { background: rgba(241,245,249,0.92); }
 body.light #drop-overlay .box { color: #1E293B; border-color: #2563EB; }

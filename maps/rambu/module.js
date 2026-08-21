@@ -573,6 +573,7 @@ function setupDragDrop() {
 }
 
 async function loadParquetData(ctx) {
+  ctx?.ui?.Loading?.mini?.("Memuat data rambu…");
   await initParquet();
 
   const jaringanUrl = new URL('data/jaringan_jalan.parquet', import.meta.url);
@@ -608,6 +609,7 @@ async function loadParquetData(ctx) {
   addRambuLayer();
   showUI();
   updateStats();
+  ctx?.ui?.Loading?.hideMini?.();
 
   if (jaringanGeoJSON && rambuGeoJSON && ruasGeoJSON) {
     fileDrop.classList.add("loaded");

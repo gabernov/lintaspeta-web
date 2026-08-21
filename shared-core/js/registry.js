@@ -58,25 +58,28 @@ export const Registry = {
       return;
     }
 
-    // 1. Show loading overlay + animate camera out to globe (awaited so
-    //    the new module's fitBounds doesn't cancel the zoom-out).
-    if (this.ctx?.ui?.Loading?.show) {
-      this.ctx.ui.Loading.show(`Memuat ${mode.title || id}…`);
-    }
-    if (this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
-      await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
+    // On the FIRST activate the shell has already rendered globe + stars
+    // (its own overlay covered that wait), so no fullscreen spinner and
+    // no globe round-trip — go straight to the Jawa Barat fly-in.
+    // On later switches the brief fullscreen overlay covers the
+    // zoom-out-to-globe transition, as designed.
+    const firstActivate = !this._hasActivated;
+    if (!firstActivate) {
+      if (this.ctx?.ui?.Loading?.show) {
+        this.ctx.ui.Loading.show(`Memuat ${mode.title || id}…`);
+      }
+      if (this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
+        await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
+      }
+
+      // Globe + stars must render before the overlay hides.
+      if (this.ctx?.map && typeof this.ctx.addStarfield === "function") {
+        await this.ctx.addStarfield(this.ctx.map);
+      }
+      this._hideLoading();
     }
 
-    // 2. Wait for starfield to be ready (globe projection + stars must
-    //    render before we hide the overlay and fly to Jawa Barat).
-    if (this.ctx?.map && typeof this.ctx.addStarfield === "function") {
-      await this.ctx.addStarfield(this.ctx.map);
-    }
-
-    // 3. Hide loading overlay — globe + stars are now visible.
-    this._hideLoading();
-
-    // 4. Fly to Jawa Barat (cinematic, no data dependency).
+    // Fly to Jawa Barat (cinematic, no data dependency).
     if (this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
       await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
     }

@@ -427,6 +427,7 @@ function fitBounds() {
 // MODULE EXPORTS
 // ═══════════════════════════════════════════════════════════
 async function loadParquetData(ctx) {
+  ctx?.ui?.Loading?.mini?.("Memuat data APJ…");
   await initParquet();
 
   const pjuUrl = new URL("data/pju_detail.parquet", import.meta.url);
@@ -443,6 +444,7 @@ async function loadParquetData(ctx) {
   else console.error("Failed to load ruas:", ruasResult.reason);
 
   if (!pjuGeoJSON) {
+    ctx?.ui?.Loading?.hideMini?.();
     toast("Gagal memuat data APJ");
     return;
   }
@@ -450,6 +452,7 @@ async function loadParquetData(ctx) {
   addLayers();
   updateStats();
   renderChips();
+  ctx?.ui?.Loading?.hideMini?.();
 
   if (ctx?.search?.registerSearch && pjuGeoJSON) {
     ctx.search.registerSearch({

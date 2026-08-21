@@ -1007,6 +1007,7 @@ function setupDragDrop() {
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 async function loadParquetData(ctx) {
+  ctx?.ui?.Loading?.mini?.("Memuat data jalan…");
   await initParquet();
   const dataUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
   roadsGeoJSON = await loadParquetToGeoJSON(dataUrl);
@@ -1014,6 +1015,7 @@ async function loadParquetData(ctx) {
   addRoadsLayer();
   showUI();
   updateStats();
+  ctx?.ui?.Loading?.hideMini?.();
 
   fileDrop.classList.add("file-drop-zone--loaded");
   fileStatus.className = "file-status file-status--success";

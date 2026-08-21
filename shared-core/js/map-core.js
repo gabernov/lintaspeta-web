@@ -202,6 +202,7 @@ export const JABAR_CENTER = [107.6, -6.9];
 export function flyToJabar(map, opts = {}) {
   if (!map) return Promise.resolve();
   const duration = opts.duration ?? 2000;
+  const zoom = opts.zoom ?? 8;
   return new Promise((resolve) => {
     let settled = false;
     const finish = () => {
@@ -215,7 +216,7 @@ export function flyToJabar(map, opts = {}) {
     try {
       map.flyTo({
         center: JABAR_CENTER,
-        zoom: 10,
+        zoom,
         pitch: 0,
         bearing: 0,
         duration,

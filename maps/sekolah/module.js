@@ -908,6 +908,7 @@ function setupCollapsible() {
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 async function loadParquetData(ctx) {
+  ctx?.ui?.Loading?.mini?.("Memuat data sekolah…");
   await initParquet();
   const roadsUrl = new URL('data/ruas_jalan.parquet', import.meta.url);
   const schoolsUrl = new URL('data/sekolah_merged.parquet', import.meta.url);
@@ -933,6 +934,7 @@ async function loadParquetData(ctx) {
   if (schoolsGeoJSON) addSchoolsLayer();
   showUI();
   updateStats();
+  ctx?.ui?.Loading?.hideMini?.();
 
   if (roadsGeoJSON && schoolsGeoJSON) {
     fileDrop.classList.add("loaded");

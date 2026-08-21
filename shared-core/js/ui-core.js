@@ -111,6 +111,21 @@ export const Loading = {
     }
     if (retry) retry.style.display = "inline-flex";
     this.clearStage();
+  },
+
+  /* Small top-center pill for background data loading — the map stays
+     fully visible and interactive while this hints at progress. */
+  mini(text) {
+    const el = document.getElementById("load-mini");
+    if (!el) return;
+    const label = document.getElementById("load-mini-text");
+    if (label && text) label.textContent = text;
+    el.classList.add("show");
+  },
+
+  hideMini() {
+    const el = document.getElementById("load-mini");
+    if (el) el.classList.remove("show");
   }
 };
 
