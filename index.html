@@ -191,13 +191,27 @@
   // ═══════════════════════════════════════════════════════════
   const map = initMap({ container: "map" });
 
-  // Stars + globe are the first impression — nothing else starts until
-  // the starfield layer is live. The skeleton covers this wait.
   PanelSkeleton.show();
-  await addStarfield(map).catch(e => console.warn("starfield failed:", e));
 
   layoutTopLeftControls();
   window.addEventListener("resize", layoutTopLeftControls);
+
+  // Stars + globe are the first impression — nothing animates until
+  // they are actually PAINTED on screen (idle = rendered frame with
+  // all pending tile work done), not merely queued.
+  await addStarfield(map).catch(e => console.warn("starfield failed:", e));
+  await new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      map.off("idle", finish);
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, 8000);
+    map.on("idle", finish);
+  });
 
   Registry.ctx = {
     map,
@@ -209,8 +223,7 @@
     getBasemapStyle: () => currentBasemap,
     setBasemap: (styleName) => {
       if (getBasemapStyle() === styleName) return Promise.resolve();
-      applyBasemapStyle(styleName);
-      return Promise.resolve();
+      return applyBasemapStyle(styleName);
     },
   };
 
@@ -241,7 +254,7 @@
       const active = item.dataset.style === styleName;
       item.classList.toggle("active", active);
     });
-    setBasemap(map, styleName);
+    return setBasemap(map, styleName);
   };
   const closeBasemap = () => {
     basemapDropdown.classList.remove("open");
@@ -302,7 +315,9 @@ const SUN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 
       item.classList.toggle("active", item.dataset.style === "liberty");
     });
   } else {
-    applyBasemapStyle("dark");
+    // Awaited: the dark style swap (incl. its starfield re-add) must
+    // finish BEFORE the fly-in starts, or tiles stall mid-flight.
+    await applyBasemapStyle("dark");
   }
   // Support ?mode=<id> deep-linking (used by the legacy subdomain
   // redirects: jalan/sekolah/rambukelasjalan → peta.dishubjabar.com).
