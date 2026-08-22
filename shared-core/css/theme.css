@@ -136,6 +136,8 @@ body.booting #menu-btn,
 body.booting #search-bar,
 body.booting #panel-skeleton,
 body.booting .maplibregl-ctrl-top-left,
+body.booting .maplibregl-ctrl-bottom-left,
+body.booting .maplibregl-ctrl-bottom-right,
 body.booting #brand-mark {
   opacity: 0;
   pointer-events: none;
