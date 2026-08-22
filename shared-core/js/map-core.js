@@ -112,7 +112,7 @@ export function initMap({ container }) {
 
   const map = new maplibregl.Map({
     container,
-    style: "https://tiles.openfreemap.org/styles/liberty",
+    style: "https://tiles.openfreemap.org/styles/bright",
     center: [0, 0],
     zoom: 0,
     pitch: 0,

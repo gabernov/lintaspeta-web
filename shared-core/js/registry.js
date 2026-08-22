@@ -58,37 +58,41 @@ export const Registry = {
       return;
     }
 
-    // Fullscreen loading is retired: mode switches play the zoom-out
-    // and fly-in live while the panel skeleton covers the panel swap.
-    // Skipped on the first activate — the map already starts at globe.
     const firstActivate = !this._hasActivated;
+
+    // Mode switches park at the globe view while the new mode's data
+    // loads — the fly-in only happens once that data is on the map
+    // (see below). Skipped on first activate: the page opens at globe.
     if (!firstActivate && this.ctx?.map && typeof this.ctx.flyToGlobe === "function") {
       await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
 
-    // Fly to Jawa Barat (cinematic, no data dependency).
-    if (this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
+    // First load ONLY: rushed cinematic fly-in, data streams behind it.
+    if (firstActivate && this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
       await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
     }
 
-    // 5. Teardown current mode
+    // Teardown current mode
     await this.teardown();
 
-    // 6. Set active
+    // Set active
     this.currentId = id;
     this._closeMenu();
+
+    // Deep-link: ?mode=<id> so a refresh reopens the same mode.
+    try {
+      history.replaceState(null, "", `${location.pathname}?mode=${id}`);
+    } catch (e) {}
 
     // Show the panel skeleton only AFTER the old panel is removed — the
     // old panel stays visible during the fly-out, so showing the skeleton
     // earlier would render two overlapping panels side by side.
-    // Track ownership so a LATE _hideLoading from a previous activate
-    // (still awaiting postInitFn/addStarfield) cannot hide this one.
     this._skeletonOwnerId = id;
     if (this.ctx?.ui?.PanelSkeleton?.show) {
       this.ctx.ui.PanelSkeleton.show();
     }
 
-    // 7. Toggle active class on menu mode rows
+    // Toggle active class on menu mode rows
     document.querySelectorAll("#menu-panel .mode-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.mode === id);
     });
@@ -96,7 +100,7 @@ export const Registry = {
     // Update document title
     document.title = mode.title ? `${mode.title} — LintasPeta` : "LintasPeta";
 
-    // 8. Load module (non-blocking: UI creates immediately, data loads in background)
+    // Load module
     let config = null;
     let module = null;
     try {
@@ -109,27 +113,11 @@ export const Registry = {
       return;
     }
 
-    // 9. Apply the mode's default basemap BEFORE init so layers are
-    //    added to the correct style and fitBounds isn't interrupted.
-    //    Skipped on the very first activate: the shell has already set
-    //    the theme-matched basemap, forcing the mode default here would
-    //    undo the user's theme choice.
-    const isInitial = !this._hasActivated;
     this._hasActivated = true;
-    if (
-      !isInitial &&
-      config?.defaultBasemap &&
-      typeof this.ctx?.setBasemap === "function"
-    ) {
-      const currentBasemap =
-        this.ctx.getBasemapStyle?.() ??
-        document.querySelector(".basemap-item.active")?.dataset.style;
-      if (currentBasemap !== config.defaultBasemap) {
-        await this.ctx.setBasemap(config.defaultBasemap);
-      }
-    }
 
-    // 10. Init module — UI creates immediately, parquet loads in background
+    // Init module — resolves when the mode's INITIAL DATA is ready
+    // (UI mounts immediately inside init; the returned promise covers
+    // the parquet download), so switches can wait for it before flying.
     if (module && typeof module.init === "function") {
       const { map, ui, search } = this.ctx || {};
       if (!map) {
@@ -137,14 +125,17 @@ export const Registry = {
         return;
       }
       try {
-        // module.init() should return quickly (createUI) and load data async.
-        // No loading overlay — user already sees globe + stars + fly-to.
         await module.init({ map, data: null, config, ui, search });
         this._loaded = { module, config };
       } catch (err) {
         console.error(`Registry: module.init("${id}") failed:`, err);
         this._toast(`Gagal memuat mode ${mode.title || id}`);
       }
+    }
+
+    // Switches: data is on the map — NOW fly to Jawa Barat.
+    if (!firstActivate && this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
+      await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
     }
 
     if (postInitFn && this.ctx?.map) {

@@ -1057,7 +1057,7 @@ export const module = {
     };
     map.on('basemap-changed', basemapChangedHandler);
 
-    loadParquetData(ctx);
+    return loadParquetData(ctx);
   },
 
   teardown() {

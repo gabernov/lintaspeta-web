@@ -527,7 +527,7 @@ export const module = {
     basemapChangedHandler = () => { reAddLayers(); };
     map.on("basemap-changed", basemapChangedHandler);
 
-    loadParquetData(ctx);
+    return loadParquetData(ctx);
   },
 
   teardown() {

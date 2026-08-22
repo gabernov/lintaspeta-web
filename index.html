@@ -305,20 +305,12 @@ const SUN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 
   // ═══════════════════════════════════════════════════════════
   // STEP 7: ACTIVATE DEFAULT MODE
   // ═══════════════════════════════════════════════════════════
-  // In dark mode, switch to a dark basemap before activating so the map
-  // matches the UI. In light mode, keep the initial liberty style (no
-  // redundant setStyle) and only sync the dropdown's active marker.
-  // transformStyle in setBasemap preserves the starfield across the
-  // dark style switch.
-  if (isLight) {
-    basemapItems.forEach((item) => {
-      item.classList.toggle("active", item.dataset.style === "liberty");
-    });
-  } else {
-    // Awaited: the dark style swap (incl. its starfield re-add) must
-    // finish BEFORE the fly-in starts, or tiles stall mid-flight.
-    await applyBasemapStyle("dark");
-  }
+  // Uniform initial basemap: bright for every mode and theme — the map
+  // style itself already loads bright, so just sync the dropdown marker.
+  // Users switch it themselves from here on.
+  basemapItems.forEach((item) => {
+    item.classList.toggle("active", item.dataset.style === "bright");
+  });
   // Support ?mode=<id> deep-linking (used by the legacy subdomain
   // redirects: jalan/sekolah/rambukelasjalan → peta.dishubjabar.com).
   // Falls back to the first registered mode if the param is absent/invalid.
