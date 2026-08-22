@@ -74,6 +74,18 @@ async function addStarfieldInner(map) {
     }
   } catch (e) {}
 
+  // Space around the globe isn't a style layer — under globe projection
+  // it's the sky/clear color, so paint that dark too.
+  try {
+    map.setSky({
+      "sky-color": "#020617",
+      "horizon-color": "#0b1224",
+      "fog-color": "#020617",
+    });
+  } catch (e) {
+    console.warn("setSky failed:", e);
+  }
+
   // Remove any existing starfield layer via the map API (custom layers
   // are not always reflected in getStyle().layers, so iterate both).
   try {
@@ -398,11 +410,12 @@ export async function setBasemap(map, styleName) {
       transformStyle: (_, next) => ({
         ...next,
         projection: { type: "globe" },
-        layers: next.layers.map((l) =>
-          l.type === "background"
-            ? { ...l, paint: { ...l.paint, "background-color": "#020617" } }
-            : l
-        ),
+        sky: {
+          ...next.sky,
+          "sky-color": "#020617",
+          "horizon-color": "#0b1224",
+          "fog-color": "#020617",
+        },
       }),
     });
     await waitForMapReady(map);
