@@ -8,6 +8,11 @@ export function preloadStarfield() {
     ).then(mod => {
       MaplibreStarfieldLayer = mod.MaplibreStarfieldLayer;
       return MaplibreStarfieldLayer;
+    }).catch(err => {
+      // Never cache a rejection — a single esm.sh hiccup must not
+      // poison every retry for the rest of the session.
+      starfieldPromise = null;
+      throw err;
     });
   }
   return starfieldPromise;
@@ -41,7 +46,12 @@ export async function waitForMapReady(map) {
 let starfieldQueue = Promise.resolve();
 
 export function addStarfield(map) {
-  starfieldQueue = starfieldQueue.then(() => addStarfieldInner(map));
+  starfieldQueue = starfieldQueue
+    .then(() => addStarfieldInner(map))
+    .catch(e => {
+      // One failed attempt must not deadlock every future call.
+      console.warn("addStarfield failed:", e);
+    });
   return starfieldQueue;
 }
 
@@ -380,7 +390,11 @@ export async function setBasemap(map, styleName) {
       }),
     });
     await waitForMapReady(map);
-    await addStarfield(map);
+    try {
+      await addStarfield(map);
+    } catch (e) {
+      console.warn("starfield after basemap switch failed:", e);
+    }
     await waitForMapReady(map);
     // setStyle dropped the mode's data layers (sources + layers are not
     // part of the style spec). style.load can race the source teardown,
