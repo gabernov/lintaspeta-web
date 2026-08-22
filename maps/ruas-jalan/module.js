@@ -1020,20 +1020,6 @@ async function loadParquetData(ctx) {
   fileDrop.classList.add("file-drop-zone--loaded");
   fileStatus.className = "file-status file-status--success";
   fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} ruas jalan`;
-
-  const b = new maplibregl.LngLatBounds();
-  const validCoord = (c) => c && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
-  for (const f of roadsGeoJSON.features) {
-    const flat = f.geometry.coordinates.flat(2);
-    for (let i = 0; i + 1 < flat.length; i += 2) {
-      if (validCoord([flat[i], flat[i + 1]])) b.extend([flat[i], flat[i + 1]]);
-    }
-  }
-  if (!b.isEmpty()) {
-    setTimeout(() => {
-      map.fitBounds(b, { padding: 60, minZoom: 9, maxZoom: 13, duration: 4500, essential: true });
-    }, 1500);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════

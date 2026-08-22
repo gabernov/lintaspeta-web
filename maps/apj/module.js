@@ -405,24 +405,6 @@ function reAddLayers() {
   addLayers();
 }
 
-function fitBounds() {
-  const bounds = new maplibregl.LngLatBounds();
-  if (!pjuGeoJSON || !pjuGeoJSON.features.length) return;
-  let added = false;
-  for (const f of pjuGeoJSON.features) {
-    const c = f.geometry?.coordinates;
-    if (!c) continue;
-    const flat = c.flat(Infinity);
-    for (let i = 0; i + 1 < flat.length; i += 2) {
-      if (isFinite(flat[i]) && isFinite(flat[i + 1])) {
-        bounds.extend([flat[i], flat[i + 1]]);
-        added = true;
-      }
-    }
-  }
-  if (added) map.fitBounds(bounds, { padding: 40, duration: 800, maxZoom: 12 });
-}
-
 // ═══════════════════════════════════════════════════════════
 // MODULE EXPORTS
 // ═══════════════════════════════════════════════════════════
@@ -482,8 +464,6 @@ async function loadParquetData(ctx) {
       },
     });
   }
-
-  setTimeout(fitBounds, 500);
 }
 
 export const module = {

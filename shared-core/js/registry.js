@@ -59,6 +59,7 @@ export const Registry = {
     }
 
     const firstActivate = !this._hasActivated;
+    const switchStartedAt = Date.now();
 
     // Mode switches park at the globe view while the new mode's data
     // loads — the fly-in only happens once that data is on the map
@@ -133,8 +134,15 @@ export const Registry = {
       }
     }
 
-    // Switches: data is on the map — NOW fly to Jawa Barat.
+    // Switches: data is on the map — NOW fly to Jawa Barat. A minimum
+    // globe dwell keeps the stars moment visible even when parquet
+    // comes back instantly from HTTP cache.
     if (!firstActivate && this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
+      const MIN_GLOBE_MS = 2500;
+      const elapsed = Date.now() - switchStartedAt;
+      if (elapsed < MIN_GLOBE_MS) {
+        await new Promise((r) => setTimeout(r, MIN_GLOBE_MS - elapsed));
+      }
       await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
     }
 

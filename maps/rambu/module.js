@@ -620,7 +620,6 @@ async function loadParquetData(ctx) {
       `${ruasGeoJSON.features.length} ruas`
     ];
     fileStatus.textContent = `Auto-loaded ${parts.join(", ")}`;
-    setTimeout(() => fitBounds(), 500);
   }
 
   if (ctx?.search?.registerSearch && rambuGeoJSON) {

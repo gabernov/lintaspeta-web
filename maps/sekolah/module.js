@@ -940,27 +940,6 @@ async function loadParquetData(ctx) {
     fileDrop.classList.add("loaded");
     fileStatus.className = "status ok";
     fileStatus.textContent = `Auto-loaded ${roadsGeoJSON.features.length} roads, ${schoolsGeoJSON.features.length} schools`;
-    setTimeout(() => {
-      try {
-        const bounds = new maplibregl.LngLatBounds();
-        const valid = (c) => c && isFinite(c[0]) && isFinite(c[1]) && c[0] >= 104 && c[0] <= 110 && c[1] >= -9.5 && c[1] <= -4.5;
-        schoolsGeoJSON.features.forEach(f => {
-          const c = f.geometry?.coordinates;
-          if (c && valid(c)) bounds.extend(c);
-        });
-        if (roadsGeoJSON) roadsGeoJSON.features.forEach(f => {
-          const flat = f.geometry?.coordinates?.flat(2);
-          if (flat) for (let i = 0; i + 1 < flat.length; i += 2) {
-            if (valid([flat[i], flat[i + 1]])) bounds.extend([flat[i], flat[i + 1]]);
-          }
-        });
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, { padding: 60, minZoom: 9, maxZoom: 12, duration: 2000 });
-        }
-      } catch (e) {
-        console.error("Fly-to error:", e);
-      }
-    }, 500);
   }
 
   if (ctx?.search?.registerSearch && schoolsGeoJSON) {
