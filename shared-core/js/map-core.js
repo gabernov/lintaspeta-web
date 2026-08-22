@@ -393,10 +393,15 @@ export async function setBasemap(map, styleName) {
 
 export function layoutTopLeftControls() {
   const isMobile = window.matchMedia("(max-width: 600px)").matches;
-  const panel = document.getElementById("panel");
+  // Anchor on #panel, falling back to #panel-skeleton — identical
+  // geometry, so tools hold their position through the swap instead of
+  // collapsing to the edge and jumping back on panel mount.
+  const anchor =
+    document.getElementById("panel") ||
+    document.getElementById("panel-skeleton");
   let left = 12;
-  if (!isMobile && panel) {
-    const rect = panel.getBoundingClientRect();
+  if (!isMobile && anchor) {
+    const rect = anchor.getBoundingClientRect();
     if (rect.width > 0) left = Math.round(rect.right) + 12;
   }
 

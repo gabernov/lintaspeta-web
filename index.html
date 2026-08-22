@@ -191,8 +191,10 @@
   // ═══════════════════════════════════════════════════════════
   const map = initMap({ container: "map" });
 
+  // Stars + globe are the first impression — nothing else starts until
+  // the starfield layer is live. The skeleton covers this wait.
   PanelSkeleton.show();
-  addStarfield(map);
+  await addStarfield(map).catch(e => console.warn("starfield failed:", e));
 
   layoutTopLeftControls();
   window.addEventListener("resize", layoutTopLeftControls);
@@ -212,14 +214,7 @@
     },
   };
 
-  setPostInitFn(async (map) => {
-    // Snap the control column to the panel's edge BEFORE the slower
-    // starfield re-add, so buttons never overlap the panel while the
-    // basemap reloads. (layoutTopLeftControls reads #panel's rect; if
-    // it were called only after addStarfield, buttons would sit at
-    // left:12 over the panel for seconds during style switches.)
-    layoutTopLeftControls();
-    await addStarfield(map);
+  setPostInitFn(async () => {
     layoutTopLeftControls();
   });
 

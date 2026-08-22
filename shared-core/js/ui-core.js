@@ -145,7 +145,11 @@ let skeletonActive = false;
 function syncSkeleton() {
   if (!skeletonEl) return;
   const panelExists = !!document.getElementById("panel");
+  const changed = skeletonEl.classList.contains("visible") !== (skeletonActive && !panelExists);
   skeletonEl.classList.toggle("visible", skeletonActive && !panelExists);
+  // Tools anchor to the panel's right edge; resize listeners re-run
+  // layoutTopLeftControls the moment the swap happens.
+  if (changed) window.dispatchEvent(new Event("resize"));
 }
 
 // Watch for #panel appearing/disappearing; re-evaluate skeleton each time.
