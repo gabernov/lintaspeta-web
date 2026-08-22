@@ -68,9 +68,11 @@ export const Registry = {
       await this.ctx.flyToGlobe(this.ctx.map, { duration: 700 });
     }
 
-    // First load ONLY: rushed cinematic fly-in, data streams behind it.
+    // First load ONLY: let the sky land for a beat, then a long,
+    // smooth dive to Jawa Barat while data streams in behind it.
     if (firstActivate && this.ctx?.map && typeof this.ctx.flyToJabar === "function") {
-      await this.ctx.flyToJabar(this.ctx.map, { duration: 2000 });
+      await new Promise((r) => setTimeout(r, 700));
+      await this.ctx.flyToJabar(this.ctx.map, { duration: 3200 });
     }
 
     // Teardown current mode

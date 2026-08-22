@@ -124,6 +124,33 @@ button:active, .mode-btn:active, .filter-btn:active,
   animation: spin 0.8s linear infinite;
 }
 
+/* ═══ Boot: sky-first reveal ═══
+   Until globe + stars are painted, ALL shell chrome stays hidden — the
+   night sky is the only thing on stage (plus the mini pill). Removing
+   .booting triggers a one-shot fade-in via animation, so existing
+   per-element transition declarations are left untouched. */
+body.booting #toolbar,
+body.booting #basemap-gallery,
+body.booting #locate-btn,
+body.booting #menu-btn,
+body.booting #search-bar,
+body.booting #panel-skeleton,
+body.booting .maplibregl-ctrl-top-left,
+body.booting #brand-mark {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes ui-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+body:not(.booting) #toolbar { animation: ui-reveal 700ms ease both; }
+body:not(.booting) #menu-btn { animation: ui-reveal 700ms ease both; }
+body:not(.booting) #search-bar { animation: ui-reveal 700ms ease both; }
+body:not(.booting) #locate-btn { animation: ui-reveal 700ms ease 100ms both; }
+body:not(.booting) #basemap-gallery { animation: ui-reveal 700ms ease 160ms both; }
+body:not(.booting) .maplibregl-ctrl-top-left { animation: ui-reveal 700ms ease 220ms both; }
+
 /* Drop overlay */
 #drop-overlay {
   display: none; position: fixed; inset: 0; z-index: 1000;
