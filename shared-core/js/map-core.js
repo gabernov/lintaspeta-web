@@ -63,19 +63,9 @@ async function addStarfieldInner(map) {
 
   await waitForStyle(map);
 
-  // Deep-space backdrop: light styles paint a bright background across
-  // the whole canvas and wash out the stars. Darken it; land comes
-  // from tiles, so only the sky region around the globe is affected.
-  try {
-    for (const layer of map.getStyle().layers) {
-      if (layer.type === "background") {
-        map.setPaintProperty(layer.id, "background-color", "#020617");
-      }
-    }
-  } catch (e) {}
-
   // Space around the globe isn't a style layer — under globe projection
-  // it's the sky/clear color, so paint that dark too.
+  // it's the sky/clear color, so paint that dark. Style layers are left
+  // untouched: the background layer doubles as land color.
   try {
     map.setSky({
       "sky-color": "#020617",
