@@ -178,6 +178,8 @@ export const Registry = {
     }
     this._loaded = null;
 
+    if (this.ctx?.search?.resetSearch) this.ctx.search.resetSearch();
+
     // Clear active button state
     document.querySelectorAll("#menu-panel .mode-btn").forEach((btn) => {
       btn.classList.remove("active");

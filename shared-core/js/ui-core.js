@@ -219,6 +219,7 @@ let currentSearchHandler = null;
 let searchResults = [];
 let searchActiveIndex = -1;
 let searchDebounceTimer = null;
+let searchAbort = null;
 
 export function registerSearch(handler) {
   currentSearchHandler = handler;
@@ -237,13 +238,22 @@ export function registerSearch(handler) {
       dropdown.style.display = "none";
       return;
     }
-    dropdown.innerHTML = searchResults
-      .map((r, i) =>
-        `<div class="search-item${i === searchActiveIndex ? " active" : ""}" data-idx="${i}">
+    let lastGroup = null;
+    let html = "";
+    searchResults.forEach((r, i) => {
+      if (r.group && r.group !== lastGroup) {
+        html += `<div class="search-section-header">${escHtml(r.group)}</div>`;
+        lastGroup = r.group;
+      }
+      html += `<div class="search-item${i === searchActiveIndex ? " active" : ""}" data-idx="${i}">
            <div class="s-name">${escHtml(r.title)}</div>
            ${r.subtitle ? `<div class="s-meta">${escHtml(r.subtitle)}</div>` : ""}
-         </div>`)
-      .join("");
+         </div>`;
+    });
+    if (handler?.attribution) {
+      html += `<div class="search-info">${escHtml(handler.attribution)}</div>`;
+    }
+    dropdown.innerHTML = html;
     dropdown.style.display = "block";
     const active = dropdown.querySelector(".search-item.active");
     if (active) active.scrollIntoView({ block: "nearest" });
@@ -251,17 +261,23 @@ export function registerSearch(handler) {
 
   const runQuery = async (q) => {
     if (!handler || !q.trim()) {
+      if (searchAbort) { searchAbort.abort(); searchAbort = null; }
       searchResults = [];
       searchActiveIndex = -1;
       hideSearchDropdown();
       return;
     }
+    if (searchAbort) searchAbort.abort();
+    searchAbort = new AbortController();
+    const signal = searchAbort.signal;
     try {
-      const results = await handler.onQuery(q.trim());
+      const results = await handler.onQuery(q.trim(), { signal });
+      if (signal.aborted) return;
       searchResults = results || [];
       searchActiveIndex = searchResults.length ? 0 : -1;
       render();
     } catch (e) {
+      if (e?.name === "AbortError") return;
       console.error("Search error:", e);
       searchResults = [];
       hideSearchDropdown();
@@ -313,6 +329,32 @@ export function registerSearch(handler) {
   document.onclick = (e) => {
     if (!e.target.closest("#search-box")) hideSearchDropdown();
   };
+}
+
+export function resetSearch() {
+  currentSearchHandler = null;
+  searchResults = [];
+  searchActiveIndex = -1;
+  if (searchAbort) { searchAbort.abort(); searchAbort = null; }
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+  const input = document.getElementById("search-input");
+  const dropdown = document.getElementById("search-dropdown");
+  const clear = document.getElementById("search-clear");
+  if (input) {
+    input.oninput = null;
+    input.onkeydown = null;
+    input.value = "";
+  }
+  if (dropdown) {
+    dropdown.onclick = null;
+    dropdown.innerHTML = "";
+    dropdown.style.display = "none";
+  }
+  if (clear) clear.onclick = null;
+  document.onclick = null;
 }
 
 function hideSearchDropdown() {
