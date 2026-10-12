@@ -1,6 +1,7 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config from "./config.js";
 
 export { config };
@@ -34,6 +35,8 @@ let searchBar, searchBox, searchInput, searchDropdown, searchClear, locateBtn;
 let panel, panelHeader, panelBody, panelToggle, sheetHandle;
 let fileDrop, fileInput, fileStatus;
 let uptdList, legendEl, legendRoads;
+let exportBtnEl = null, exportCountEl = null;
+let exportClickHandler = null;
 let dropOverlay;
 
 // ═══════════════════════════════════════════════════════════
@@ -396,7 +399,23 @@ function updateStats() {
     roadsGeoJSON.features.forEach(f => { if (f.properties?.kode) kabSet.add(f.properties.kode); });
     document.getElementById("stat-kab").textContent = kabSet.size;
     document.getElementById("road-badge").textContent = roadsGeoJSON.features.length.toLocaleString();
+    if (exportCountEl) {
+      const filtered = roadsGeoJSON.features.filter((f) => activeFilters.size >= 4 || activeFilters.has(f.properties?.unit_kerja_kode));
+      exportCountEl.textContent = filtered.length.toLocaleString();
+    }
   }
+}
+
+function filteredRoads() {
+  if (!roadsGeoJSON) return [];
+  return roadsGeoJSON.features.filter((f) => activeFilters.size >= 4 || activeFilters.has(f.properties?.unit_kerja_kode));
+}
+
+async function runRoadsExport() {
+  if (!roadsGeoJSON) return;
+  const ok = await ensureXLSX();
+  if (!ok) return;
+  exportFeaturesToXLSX(filteredRoads(), { prefix: "ruas_jalan", sheetName: "Ruas Terfilter" });
 }
 
 function fitBounds() {
@@ -705,6 +724,7 @@ function createDOM() {
         </div>
         <div class="section-content">
           <div class="uptd-list" id="uptd-list" role="group" aria-label="Daftar UPTD"></div>
+          <button type="button" id="roads-export" class="roads-export">⬇ Unduh XLSX (<span id="roads-export-count">0</span>)</button>
         </div>
       </section>
     </div>
@@ -722,6 +742,7 @@ function createDOM() {
   fileInput = document.getElementById("file-input");
   fileStatus = document.getElementById("file-status");
   uptdList = document.getElementById("uptd-list");
+  exportCountEl = document.getElementById("roads-export-count");
 
   // Section collapse: clicking a .section-header toggles the parent
   // .panel-section between expanded (default) and .collapsed.
@@ -1028,6 +1049,11 @@ export const module = {
     map = ctx.map;
 
     createDOM();
+    exportBtnEl = document.getElementById("roads-export");
+    if (exportBtnEl) {
+      exportClickHandler = () => { runRoadsExport(); };
+      exportBtnEl.addEventListener("click", exportClickHandler);
+    }
     setupSearch();
     setupDragDrop();
     sheetTeardown = initBottomSheet({ panel, handle: sheetHandle, toggle: panelToggle, header: panelHeader });
@@ -1080,6 +1106,11 @@ export const module = {
       map.off('click', 'roads-hitbox', roadClickHandler);
       roadClickHandler = null;
     }
+    if (exportBtnEl && exportClickHandler) {
+      exportBtnEl.removeEventListener("click", exportClickHandler);
+      exportClickHandler = null;
+    }
+    exportBtnEl = exportCountEl = null;
 
     // Remove layers (reverse order)
     const layerIds = ["hl-glow", "hl-line", "hl-fill", "roads-selected", "roads-line", "roads-hitbox"];

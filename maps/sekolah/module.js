@@ -1,6 +1,8 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
-import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { escHtml, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { parseCoordInput, geocodePlaces, GEO_ATTRIBUTION } from "../../shared-core/js/geocode-core.js";
+import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config from "./config.js";
 
 export { config };
@@ -20,6 +22,7 @@ let schoolsGeoJSON = null;
 let activeFilters = new Set();
 let hoveredSchoolId = null;
 let dragCounter = 0;
+let coordMarker = null;
 
 const dataFilters = {
   jenjang: new Set(),
@@ -31,9 +34,6 @@ const dataFilters = {
 const JENJANG_TOTAL = 5;
 const STATUS_TOTAL = 2;
 const VALIDASI_TOTAL = 2;
-
-let xlsxLoading = false;
-let xlsxLoaded = false;
 
 // ═══════════════════════════════════════════════════════════
 // DOM REFS
@@ -394,41 +394,33 @@ function fitBounds() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// XLSX EXPORT (lazy load)
+// SEARCH FOCUS
 // ═══════════════════════════════════════════════════════════
-async function ensureXLSX() {
-  if (xlsxLoaded) return true;
-  if (xlsxLoading) {
-    while (xlsxLoading) await new Promise(r => setTimeout(r, 50));
-    return xlsxLoaded;
-  }
-  xlsxLoading = true;
-  try {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-    xlsxLoaded = true;
-    return true;
-  } catch (e) {
-    console.error("Failed to load XLSX:", e);
-    toast("Gagal memuat library XLSX");
-    return false;
-  } finally {
-    xlsxLoading = false;
-  }
+function focusCoord(lng, lat, title, subtitle) {
+  if (!map) return;
+  if (coordMarker) { coordMarker.remove(); coordMarker = null; }
+  const el = document.createElement("div");
+  el.className = "coord-marker";
+  coordMarker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+  const head = title ? escHtml(title) : `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  showPopup(map, [lng, lat], `<div><b style="font-size:13px;">${head}</b>${subtitle ? `<br/><span style="color:#94a3b8;font-size:11px;">${escHtml(subtitle)}</span>` : ""}</div>`, { maxWidth: "300px" });
 }
 
-function exportFilteredSchools() {
-  if (!schoolsGeoJSON || typeof XLSX === "undefined") return;
+function focusPlace(place) {
+  if (!map) return;
+  map.flyTo({ center: [place.lng, place.lat], zoom: 15, duration: 800, essential: true });
+  focusCoord(place.lng, place.lat, place.title, place.subtitle);
+}
 
+// ═══════════════════════════════════════════════════════════
+// XLSX EXPORT
+// ═══════════════════════════════════════════════════════════
+function getFilteredSchools() {
+  if (!schoolsGeoJSON) return [];
   const filterOn = filterToggle.checked;
   const maxDist = Number(distSlider.value);
 
-  const filtered = schoolsGeoJSON.features.filter(f => {
+  return schoolsGeoJSON.features.filter(f => {
     const p = f.properties;
     if (filterOn) {
       const d = p.distance_m;
@@ -442,39 +434,6 @@ function exportFilteredSchools() {
     if (dataFilters.uptd && p.nearest_road_unit_kerja !== dataFilters.uptd) return false;
     return true;
   });
-
-  const skipKeys = new Set(["geometry", "geometry_bbox", "wkb_geometry", "geom"]);
-  const allKeys = [];
-  filtered.forEach(f => {
-    for (const k of Object.keys(f.properties)) {
-      if (!skipKeys.has(k) && !allKeys.includes(k)) allKeys.push(k);
-    }
-  });
-
-  const sanitizeKey = k => k.replace(/[/\\]/g, "_").replace(/[<>&"']/g, "");
-
-  const rows = filtered.map(f => {
-    const row = {};
-    allKeys.forEach(k => {
-      let val = f.properties[k];
-      if (typeof val === "boolean") val = val ? "Ya" : "Tidak";
-      if (typeof val === "number" && (!isFinite(val) || isNaN(val))) val = null;
-      row[sanitizeKey(k)] = val ?? "";
-    });
-    return row;
-  });
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Filtered Schools");
-
-  const now = new Date();
-  const pad = n => String(n).padStart(2, "0");
-  const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const timeStr = `${pad(now.getHours())}${pad(now.getMinutes())}`;
-  const filename = `sekolah_terfilter_${filtered.length}_baris_${dateStr}_${timeStr}.xlsx`;
-
-  XLSX.writeFile(wb, filename);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -850,7 +809,8 @@ function setupFilters() {
 
   exportClickHandler = async () => {
     const ok = await ensureXLSX();
-    if (ok) exportFilteredSchools();
+    if (!ok) return;
+    exportFeaturesToXLSX(getFilteredSchools(), { prefix: "sekolah", sheetName: "Filtered Schools" });
   };
   exportBtn.addEventListener("click", exportClickHandler);
 }
@@ -944,18 +904,36 @@ async function loadParquetData(ctx) {
 
   if (ctx?.search?.registerSearch && schoolsGeoJSON) {
     ctx.search.registerSearch({
-      placeholder: "Cari sekolah / NPSN...",
-      onQuery: async (q) => {
+      placeholder: "Cari sekolah / NPSN / koordinat...",
+      attribution: GEO_ATTRIBUTION,
+      onQuery: async (q, { signal } = {}) => {
+        const coord = parseCoordInput(q);
+        if (coord) {
+          return [{
+            group: "Koordinat",
+            title: `📍 ${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`,
+            subtitle: "Tampilkan titik di peta",
+            action: () => focusCoord(coord.lng, coord.lat, null, null),
+          }];
+        }
+        const center = map ? [map.getCenter().lng, map.getCenter().lat] : null;
+        const places = await geocodePlaces(q, { center, signal });
+        if (signal?.aborted) return [];
+        const results = [];
+        for (const pl of places) {
+          results.push({ group: "Lokasi", title: pl.title, subtitle: pl.subtitle, action: () => focusPlace(pl) });
+        }
         const term = q.toLowerCase();
         const matches = schoolsGeoJSON.features.filter(f => {
           const nama = String(f.properties["NAMA SEKOLAH"] || "").toLowerCase();
           const npsn = String(f.properties.NPSN || "");
           return nama.includes(term) || npsn.includes(q);
         }).slice(0, 8);
-        return matches.map(f => {
+        for (const f of matches) {
           const p = f.properties;
           const c = f.geometry?.coordinates;
-          return {
+          results.push({
+            group: "Sekolah",
             title: p["NAMA SEKOLAH"] || "Sekolah",
             subtitle: `${p.Jenjang || ""} · ${p.KABUPATEN || ""} · NPSN ${p.NPSN || "-"}`,
             action: () => {
@@ -963,8 +941,9 @@ async function loadParquetData(ctx) {
               map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
               showPopup(map, c, config.popup(f), { maxWidth: "320px" });
             },
-          };
-        });
+          });
+        }
+        return results;
       },
     });
   }
@@ -1031,6 +1010,7 @@ export const module = {
     if (map.getSource("roads")) map.removeSource("roads");
 
     closePopup();
+    if (coordMarker) { coordMarker.remove(); coordMarker = null; }
 
     if (dragEnterHandler) {
       document.body.removeEventListener("dragenter", dragEnterHandler);
@@ -1067,8 +1047,6 @@ export const module = {
     dataFilters.uptd = "";
     hoveredSchoolId = null;
     dragCounter = 0;
-    xlsxLoaded = false;
-    xlsxLoading = false;
     map = null;
   }
 };
