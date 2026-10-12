@@ -386,42 +386,70 @@ export const BASEMAPS = {
   fiord: "https://tiles.openfreemap.org/styles/fiord",
 };
 
-let styleSwitchInFlight = false;
+// The style the map is actually showing right now (initMap loads "bright").
+let appliedStyle = "bright";
+// Last requested style; a request arriving mid-switch must be kept, not
+// dropped (dropping it was the "theme toggle sometimes does nothing" bug).
+let desiredStyle = null;
+let switchChain = null;
 
-export async function setBasemap(map, styleName) {
-  if (!BASEMAPS[styleName] || styleSwitchInFlight) return;
-  styleSwitchInFlight = true;
+async function applyStyleOnce(map, styleName) {
+  // Inject globe projection into the style spec itself: MapLibre v5
+  // resets projection to the style's default (Mercator) on every
+  // setStyle, and calling setProjection afterwards is unreliable for
+  // custom 3D layers. The starfield skybox only renders in globe mode.
+  map.setStyle(BASEMAPS[styleName], {
+    transformStyle: (_, next) => ({
+      ...next,
+      projection: { type: "globe" },
+      sky: {
+        ...next.sky,
+        "sky-color": "#020617",
+        "horizon-color": "#0b1224",
+        "fog-color": "#020617",
+      },
+    }),
+  });
+  await waitForMapReady(map);
   try {
-    // Inject globe projection into the style spec itself: MapLibre v5
-    // resets projection to the style's default (Mercator) on every
-    // setStyle, and calling setProjection afterwards is unreliable for
-    // custom 3D layers. The starfield skybox only renders in globe mode.
-    map.setStyle(BASEMAPS[styleName], {
-      transformStyle: (_, next) => ({
-        ...next,
-        projection: { type: "globe" },
-        sky: {
-          ...next.sky,
-          "sky-color": "#020617",
-          "horizon-color": "#0b1224",
-          "fog-color": "#020617",
-        },
-      }),
-    });
-    await waitForMapReady(map);
-    try {
-      await addStarfield(map);
-    } catch (e) {
-      console.warn("starfield after basemap switch failed:", e);
-    }
-    await waitForMapReady(map);
-    // setStyle dropped the mode's data layers (sources + layers are not
-    // part of the style spec). style.load can race the source teardown,
-    // so fire an explicit event for the active module to re-add them.
-    map.fire("basemap-changed");
-  } finally {
-    styleSwitchInFlight = false;
+    await addStarfield(map);
+  } catch (e) {
+    console.warn("starfield after basemap switch failed:", e);
   }
+  await waitForMapReady(map);
+  // setStyle dropped the mode's data layers (sources + layers are not
+  // part of the style spec). style.load can race the source teardown,
+  // so fire an explicit event for the active module to re-add them.
+  map.fire("basemap-changed");
+}
+
+async function drainSwitches(map) {
+  try {
+    while (desiredStyle != null) {
+      const target = desiredStyle;
+      desiredStyle = null;
+      if (target === appliedStyle) continue;
+      try {
+        await applyStyleOnce(map, target);
+        appliedStyle = target;
+        // Observers (basemap marker, theme) follow the APPLIED style, never
+        // the requested one, so a failed/dropped switch can't desync the UI.
+        map.fire("basemap-applied", { style: target });
+      } catch (e) {
+        // Keep draining: one failed switch must not wedge later ones.
+        console.warn("basemap switch failed:", e);
+      }
+    }
+  } finally {
+    switchChain = null;
+  }
+}
+
+export function setBasemap(map, styleName) {
+  if (!BASEMAPS[styleName]) return Promise.resolve();
+  desiredStyle = styleName;
+  if (!switchChain) switchChain = drainSwitches(map);
+  return switchChain;
 }
 
 export function layoutTopLeftControls() {

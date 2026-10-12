@@ -250,17 +250,21 @@
   const basemapBtn = $("basemap-btn");
   const basemapDropdown = $("basemap-dropdown");
   const basemapItems = Array.from(document.querySelectorAll(".basemap-item"));
-  let currentBasemap = "liberty";
+  // initMap() loads the "bright" style; mirroring it here keeps the marker and
+  // getBasemapStyle() truthful and stops the first switch being a false no-op.
+  let currentBasemap = "bright";
 
   const getBasemapStyle = () => currentBasemap;
-  const applyBasemapStyle = (styleName) => {
-    currentBasemap = styleName;
+  const applyBasemapStyle = (styleName) => setBasemap(map, styleName);
+
+  // Switches can be coalesced/reordered, so the marker follows the style the
+  // map actually applied rather than the one that was merely requested.
+  map.on("basemap-applied", ({ style }) => {
+    currentBasemap = style;
     basemapItems.forEach((item) => {
-      const active = item.dataset.style === styleName;
-      item.classList.toggle("active", active);
+      item.classList.toggle("active", item.dataset.style === style);
     });
-    return setBasemap(map, styleName);
-  };
+  });
   const closeBasemap = () => {
     basemapDropdown.classList.remove("open");
     basemapBtn.setAttribute("aria-expanded", "false");
