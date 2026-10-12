@@ -67,11 +67,7 @@ async function addStarfieldInner(map) {
   // it's the sky/clear color, so paint that dark. Style layers are left
   // untouched: the background layer doubles as land color.
   try {
-    map.setSky({
-      "sky-color": "#020617",
-      "horizon-color": "#0b1224",
-      "fog-color": "#020617",
-    });
+    map.setSky(skyFor(skyDark));
   } catch (e) {
     console.warn("setSky failed:", e);
   }
@@ -120,12 +116,16 @@ async function addStarfieldInner(map) {
   map.triggerRepaint();
 }
 
-export function initMap({ container }) {
+export function initMap({ container, style = "bright" }) {
   preloadStarfield();
+
+  const initial = BASEMAPS[style] ? style : "bright";
+  appliedStyle = initial;
+  skyDark = isDarkStyle(initial);
 
   const map = new maplibregl.Map({
     container,
-    style: "https://tiles.openfreemap.org/styles/bright",
+    style: BASEMAPS[initial],
     center: [0, 0],
     zoom: 0,
     pitch: 0,
@@ -392,35 +392,61 @@ let appliedStyle = "bright";
 // dropped (dropping it was the "theme toggle sometimes does nothing" bug).
 let desiredStyle = null;
 let switchChain = null;
+// Space/globe sky follows the theme, so a "bright" style isn't framed in black.
+let skyDark = false;
+
+const SKY_DARK = { "sky-color": "#020617", "horizon-color": "#0b1224", "fog-color": "#020617" };
+const SKY_LIGHT = { "sky-color": "#bcd7f0", "horizon-color": "#e8f1fb", "fog-color": "#eef4fb" };
+const isDarkStyle = (name) => name === "dark" || name === "fiord";
+const skyFor = (dark) => (dark ? SKY_DARK : SKY_LIGHT);
+
+function loadStyleWithTimeout(map, styleName) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      map.off("style.load", onLoad);
+      clearTimeout(timer);
+      if (ok) resolve();
+      else reject(new Error(`style "${styleName}" did not load`));
+    };
+    const onLoad = () => finish(true);
+    map.on("style.load", onLoad);
+    const timer = setTimeout(() => finish(false), 8000);
+    try {
+      map.setStyle(BASEMAPS[styleName], {
+        transformStyle: (_, next) => ({
+          ...next,
+          projection: { type: "globe" },
+          sky: { ...next.sky, ...skyFor(isDarkStyle(styleName)) },
+        }),
+      });
+    } catch (e) {
+      finish(false);
+    }
+  });
+}
 
 async function applyStyleOnce(map, styleName) {
-  // Inject globe projection into the style spec itself: MapLibre v5
-  // resets projection to the style's default (Mercator) on every
-  // setStyle, and calling setProjection afterwards is unreliable for
-  // custom 3D layers. The starfield skybox only renders in globe mode.
-  map.setStyle(BASEMAPS[styleName], {
-    transformStyle: (_, next) => ({
-      ...next,
-      projection: { type: "globe" },
-      sky: {
-        ...next.sky,
-        "sky-color": "#020617",
-        "horizon-color": "#0b1224",
-        "fog-color": "#020617",
-      },
-    }),
-  });
+  skyDark = isDarkStyle(styleName);
+  await loadStyleWithTimeout(map, styleName);
   await waitForMapReady(map);
   try {
-    await addStarfield(map);
+    // Starfield is cosmetic and its CDN can stall; never let it gate the switch.
+    await Promise.race([addStarfield(map), new Promise((r) => setTimeout(r, 5000))]);
   } catch (e) {
     console.warn("starfield after basemap switch failed:", e);
   }
   await waitForMapReady(map);
-  // setStyle dropped the mode's data layers (sources + layers are not
-  // part of the style spec). style.load can race the source teardown,
-  // so fire an explicit event for the active module to re-add them.
-  map.fire("basemap-changed");
+  try {
+    // setStyle dropped the mode's data layers (sources + layers are not
+    // part of the style spec). style.load can race the source teardown,
+    // so fire an explicit event for the active module to re-add them.
+    map.fire("basemap-changed");
+  } catch (e) {
+    console.warn("basemap-changed handler failed:", e);
+  }
 }
 
 async function drainSwitches(map) {
@@ -430,7 +456,15 @@ async function drainSwitches(map) {
       desiredStyle = null;
       if (target === appliedStyle) continue;
       try {
-        await applyStyleOnce(map, target);
+        try {
+          await applyStyleOnce(map, target);
+        } catch (firstError) {
+          // A style that failed to load can wedge every later switch; clear
+          // it and retry once so the toggle can recover instead of dying.
+          console.warn("basemap switch retry:", firstError.message);
+          try { map.setStyle(null); } catch (e) {}
+          await applyStyleOnce(map, target);
+        }
         appliedStyle = target;
         // Observers (basemap marker, theme) follow the APPLIED style, never
         // the requested one, so a failed/dropped switch can't desync the UI.

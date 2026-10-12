@@ -139,7 +139,7 @@
 <script type="module">
   import { Registry, setPostInitFn } from "./shared-core/js/registry.js";
   import { initMap, addStarfield, setBasemap, flyToGlobe, flyToJabar, layoutTopLeftControls } from "./shared-core/js/map-core.js";
-  import { toast, Loading, PanelSkeleton, registerSearch } from "./shared-core/js/ui-core.js";
+  import { toast, Loading, PanelSkeleton, registerSearch, resetSearch } from "./shared-core/js/ui-core.js";
 
   const $ = id => document.getElementById(id);
 
@@ -189,7 +189,12 @@
   // Fullscreen loading is retired — the panel skeleton is the
   // first-load indicator while globe, stars and data stream in.
   // ═══════════════════════════════════════════════════════════
-  const map = initMap({ container: "map" });
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const savedTheme = localStorage.getItem("theme");
+  let isLight = savedTheme ? savedTheme === "light" : !prefersDark;
+  const initialBasemap = isLight ? "bright" : "dark";
+
+  const map = initMap({ container: "map", style: initialBasemap });
 
   // Sky-first boot: chrome hidden (body.booting), stars own the stage.
   document.body.classList.add("booting");
@@ -221,7 +226,7 @@
   Registry.ctx = {
     map,
     ui: { toast, Loading, PanelSkeleton },
-    search: { registerSearch },
+    search: { registerSearch, resetSearch },
     flyToGlobe,
     flyToJabar,
     addStarfield,
@@ -250,9 +255,8 @@
   const basemapBtn = $("basemap-btn");
   const basemapDropdown = $("basemap-dropdown");
   const basemapItems = Array.from(document.querySelectorAll(".basemap-item"));
-  // initMap() loads the "bright" style; mirroring it here keeps the marker and
-  // getBasemapStyle() truthful and stops the first switch being a false no-op.
-  let currentBasemap = "bright";
+  // initMap() loads the theme's basemap; keep currentBasemap in sync with it.
+  let currentBasemap = initialBasemap;
 
   const getBasemapStyle = () => currentBasemap;
   const applyBasemapStyle = (styleName) => setBasemap(map, styleName);
@@ -295,9 +299,6 @@
 const MOON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>`;
 const SUN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>`;
 
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const savedTheme = localStorage.getItem("theme");
-  let isLight = savedTheme ? savedTheme === "light" : !prefersDark;
   document.body.classList.toggle("light", isLight);
 
   const themeBtn = $("theme-btn");
@@ -314,11 +315,9 @@ const SUN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 
   // ═══════════════════════════════════════════════════════════
   // STEP 7: ACTIVATE DEFAULT MODE
   // ═══════════════════════════════════════════════════════════
-  // Uniform initial basemap: bright for every mode and theme — the map
-  // style itself already loads bright, so just sync the dropdown marker.
-  // Users switch it themselves from here on.
+  // Marker starts on the theme's basemap (initMap already loaded that style).
   basemapItems.forEach((item) => {
-    item.classList.toggle("active", item.dataset.style === "bright");
+    item.classList.toggle("active", item.dataset.style === initialBasemap);
   });
   // Support ?mode=<id> deep-linking (used by the legacy subdomain
   // redirects: jalan/sekolah/rambukelasjalan → peta.dishubjabar.com).
