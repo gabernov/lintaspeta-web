@@ -1,6 +1,8 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { flyToBounds, showPopup, closePopup } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { parseCoordInput, geocodePlaces } from "../../shared-core/js/geocode-core.js";
+import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config, {
   KELAS_COLORS, KELAS_ORDER,
   UPTD_COLORS, UPTD_ORDER, UPTD_DEFAULT, UPTD_LABEL,
@@ -36,6 +38,7 @@ let ruasUPTD = new Set(UPTD_ORDER);
 let ruasQuery = "";
 let ruasNameByKode = new Map();
 let dragCounter = 0;
+let coordMarker = null;
 
 let panel, panelHeader, panelBody, panelToggle, sheetHandle;
 let fileDrop, fileInput, fileStatus;
@@ -45,6 +48,7 @@ let ruasList, ruasSearch, ruasCount, ruasRowsEl;
 let chipEls = {};
 let jarakSlider, jarakVal, jarakToggle, panjangSlider, panjangVal, panjangToggle;
 let layerRows;
+let exportCountEl;
 let sheetTeardown = null;
 
 const domListeners = [];
@@ -181,6 +185,7 @@ function updateStats() {
   if (kpiRuas) kpiRuas.textContent = countByMap(shown, (p) => p.kode_ruas).size.toLocaleString();
   if (kpiUptd) kpiUptd.textContent = countByMap(shown, (p) => p.uptd).size.toLocaleString();
   if (kpiKab) kpiKab.textContent = countByMap(shown, (p) => p.kabkota).size.toLocaleString();
+  if (exportCountEl) exportCountEl.textContent = shown.length.toLocaleString();
 }
 
 function barHTML({ value, label, color, n, total, on, group }) {
@@ -488,33 +493,69 @@ async function loadParquetData(ctx) {
   registerRambuSearch(ctx);
 }
 
+function focusCoord(lng, lat, title, subtitle) {
+  if (!map) return;
+  if (coordMarker) { coordMarker.remove(); coordMarker = null; }
+  const el = document.createElement("div");
+  el.className = "coord-marker";
+  coordMarker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+  const head = title ? escHtml(title) : `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  showPopup(map, [lng, lat], `<div><b style="font-size:13px;">${head}</b>${subtitle ? `<br/><span style="color:#94a3b8;font-size:11px;">${escHtml(subtitle)}</span>` : ""}</div>`, { maxWidth: "300px" });
+}
+
+function focusPlace(place) {
+  if (!map) return;
+  map.flyTo({ center: [place.lng, place.lat], zoom: 15, duration: 800, essential: true });
+  focusCoord(place.lng, place.lat, place.title, place.subtitle);
+}
+
 function registerRambuSearch(ctx) {
   if (!ctx?.search?.registerSearch) return;
   ctx.search.registerSearch({
-    placeholder: "Cari rambu / ruas / UPTD…",
-    onQuery: async (q) => {
-      if (!rambuGeoJSON) return [];
-      const term = q.toLowerCase();
-      const matchesFeat = rambuGeoJSON.features.filter((f) => {
-        const p = f.properties || {};
-        return String(p.nama_ruas || "").toLowerCase().includes(term)
-          || String(p.kode_ruas || "").toLowerCase().includes(term)
-          || String(p.rambu_id || "").toLowerCase().includes(term)
-          || String(p.kabkota_label || "").toLowerCase().includes(term);
-      }).slice(0, 10);
-      return matchesFeat.map((f) => {
-        const p = f.properties;
-        const c = f.geometry?.coordinates;
-        return {
-          title: p.nama_ruas || "Rambu",
-          subtitle: `${p.kode_ruas || "-"} · Kelas ${p.kelas_jalan || "-"} · ${UPTD_LABEL[p.uptd] || p.uptd || "-"}`,
-          action: () => {
-            if (!c || !map) return;
-            map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
-            showPopup(map, c, config.popup(f), { maxWidth: "320px" });
-          },
-        };
-      });
+    placeholder: "Cari rambu / ruas / UPTD / koordinat…",
+    attribution: "Hasil lokasi © OpenStreetMap contributors",
+    onQuery: async (q, { signal } = {}) => {
+      const coord = parseCoordInput(q);
+      if (coord) {
+        return [{
+          group: "Koordinat",
+          title: `📍 ${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`,
+          subtitle: "Tampilkan titik di peta",
+          action: () => focusCoord(coord.lng, coord.lat, null, null),
+        }];
+      }
+      const center = map ? [map.getCenter().lng, map.getCenter().lat] : null;
+      const places = await geocodePlaces(q, { center, signal });
+      if (signal?.aborted) return [];
+      const results = [];
+      for (const pl of places) {
+        results.push({ group: "Lokasi", title: pl.title, subtitle: pl.subtitle, action: () => focusPlace(pl) });
+      }
+      if (rambuGeoJSON) {
+        const term = q.toLowerCase();
+        const matchesFeat = rambuGeoJSON.features.filter((f) => {
+          const p = f.properties || {};
+          return String(p.nama_ruas || "").toLowerCase().includes(term)
+            || String(p.kode_ruas || "").toLowerCase().includes(term)
+            || String(p.rambu_id || "").toLowerCase().includes(term)
+            || String(p.kabkota_label || "").toLowerCase().includes(term);
+        }).slice(0, 10);
+        for (const f of matchesFeat) {
+          const p = f.properties;
+          const c = f.geometry?.coordinates;
+          results.push({
+            group: "Rambu",
+            title: p.nama_ruas || "Rambu",
+            subtitle: `${p.kode_ruas || "-"} · Kelas ${p.kelas_jalan || "-"} · ${UPTD_LABEL[p.uptd] || p.uptd || "-"}`,
+            action: () => {
+              if (!c || !map) return;
+              map.flyTo({ center: c, zoom: 15, duration: 800, essential: true });
+              showPopup(map, c, config.popup(f), { maxWidth: "320px" });
+            },
+          });
+        }
+      }
+      return results;
     },
   });
 }
@@ -612,6 +653,7 @@ function createDOM() {
           <div class="rmb-bars-title">Per UPTD</div>
           <div class="rmb-bars" id="rmb-bars-uptd"></div>
         </div>
+        <button type="button" id="rmb-export" class="rmb-export">⬇ Unduh XLSX (<span id="rmb-export-count">0</span>)</button>
       `)}
       ${section("wilayah", "Sebaran Wilayah", false, `
         <div class="rmb-bars-head"><span>Per Kota / Kabupaten</span><span class="rmb-muted" id="rmb-kab-count"></span></div>
@@ -680,6 +722,7 @@ function createDOM() {
   fileDrop = panel.querySelector("#file-drop");
   fileInput = panel.querySelector("#file-input");
   fileStatus = panel.querySelector("#file-status");
+  exportCountEl = panel.querySelector("#rmb-export-count");
 }
 
 function removeDOM() {
@@ -692,6 +735,7 @@ function removeDOM() {
   jarakSlider = jarakVal = jarakToggle = panjangSlider = panjangVal = panjangToggle = null;
   layerRows = null;
   fileDrop = fileInput = fileStatus = null;
+  exportCountEl = null;
 }
 
 function wireSections() {
@@ -711,6 +755,14 @@ function wireSections() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
   });
+}
+
+async function runExport() {
+  if (!rambuGeoJSON) return;
+  const ok = await ensureXLSX();
+  if (!ok) return;
+  const filtered = rambuGeoJSON.features.filter((f) => matches(f, null));
+  exportFeaturesToXLSX(filtered, { prefix: "rambu", sheetName: "Rambu Terfilter" });
 }
 
 function setupPanelEvents() {
@@ -742,7 +794,11 @@ function setupPanelEvents() {
       toggleLayer(layerRow.dataset.layerGroup, layerRow.dataset.layerValue);
       return;
     }
-    if (e.target.closest("#rmb-reset")) resetFilters();
+    if (e.target.closest("#rmb-reset")) { resetFilters(); return; }
+    if (e.target.closest("#rmb-export")) {
+      runExport();
+      return;
+    }
   });
 
   track(ruasSearch, "input", () => {
@@ -801,6 +857,7 @@ export const module = {
     for (const id of ["rambu", "ruas", "kolektor", "arteri"]) if (map.getSource(id)) map.removeSource(id);
 
     closePopup();
+    if (coordMarker) { coordMarker.remove(); coordMarker = null; }
 
     if (sheetTeardown) { sheetTeardown(); sheetTeardown = null; }
     clearListeners();

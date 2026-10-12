@@ -93,6 +93,16 @@ body.light #panel.rmb-panel .badge {
 }
 .rmb-reset:hover { border-color: var(--border-strong); color: var(--text-primary); background: var(--bg-tertiary); }
 
+.rmb-export {
+  width: 100%; margin-top: 12px; padding: 10px 12px;
+  border: 1px solid rgba(37, 99, 235, 0.45); border-radius: var(--radius-md);
+  background: rgba(37, 99, 235, 0.12); color: #93C5FD;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 150ms ease;
+}
+.rmb-export:hover { background: rgba(37, 99, 235, 0.22); }
+body.light .rmb-export { color: #1D4ED8; border-color: rgba(37, 99, 235, 0.35); }
+
 .rmb-layers { display: flex; flex-direction: column; gap: 6px; }
 .rmb-layer-group {
   font-size: 10px; font-weight: 700; text-transform: uppercase;

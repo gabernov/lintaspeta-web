@@ -1,6 +1,8 @@
 import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-loader.js";
 import { showPopup, closePopup } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
+import { parseCoordInput, geocodePlaces, GEO_ATTRIBUTION } from "../../shared-core/js/geocode-core.js";
+import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config, { UPTD_COLORS, KONDISI_COLORS, UPTD_DEFAULT } from "./config.js";
 
 export { config };
@@ -16,6 +18,8 @@ let panel = null, panelHeader = null, panelBody = null, panelToggle = null, shee
 let sheetTeardown = null;
 let legendEl = null, legendContent = null;
 let badgeEl = null;
+let coordMarker = null;
+let exportBtnEl = null, exportCountEl = null;
 let statsEls = {};         // hero stats: total, ruas, baik, rusak
 let kondBarsEl = null;     // per-condition progress bars
 let uptdBarsEl = null;     // per-UPTD progress bars (stats section)
@@ -42,6 +46,7 @@ let onKondBarClick = null;
 let chipHandlers = [];       // [{ el, h }]
 let singleHandlers = [];     // [{ el, h }]
 let sectionHandlers = [];
+let onExportClick = null;
 
 // ═══════════════════════════════════════════════════════════
 // FILTERS
@@ -126,6 +131,7 @@ function updateStats() {
   if (statsEls.baik) statsEls.baik.textContent = baik.toLocaleString();
   if (statsEls.rusak) statsEls.rusak.textContent = rusak.toLocaleString();
   if (badgeEl) badgeEl.textContent = total.toLocaleString();
+  if (exportCountEl) exportCountEl.textContent = total.toLocaleString();
 
   const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
   if (kondBarsEl) {
@@ -187,6 +193,33 @@ function showPjuPopup(feature) {
   const coords = feature.geometry?.coordinates;
   if (!coords) return;
   showPopup(map, coords, config.popup(feature), { maxWidth: "320px" });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SEARCH FOCUS + EXPORT
+// ═══════════════════════════════════════════════════════════
+function focusCoord(lng, lat, title, subtitle) {
+  if (!map) return;
+  if (coordMarker) { coordMarker.remove(); coordMarker = null; }
+  const el = document.createElement("div");
+  el.className = "coord-marker";
+  coordMarker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+  const head = title ? escHtml(title) : `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  showPopup(map, [lng, lat], `<div><b style="font-size:13px;">${head}</b>${subtitle ? `<br/><span style="color:#94a3b8;font-size:11px;">${escHtml(subtitle)}</span>` : ""}</div>`, { maxWidth: "300px" });
+}
+
+function focusPlace(place) {
+  if (!map) return;
+  map.flyTo({ center: [place.lng, place.lat], zoom: 15, duration: 800, essential: true });
+  focusCoord(place.lng, place.lat, place.title, place.subtitle);
+}
+
+async function runApjExport() {
+  if (!pjuGeoJSON) return;
+  const ok = await ensureXLSX();
+  if (!ok) return;
+  const filtered = pjuGeoJSON.features.filter(matchesFeature);
+  exportFeaturesToXLSX(filtered, { prefix: "apj", sheetName: "APJ Terfilter" });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -257,6 +290,7 @@ function createDOM() {
         </div>
         <div class="section-content" data-collapse-target="filter">
           <div class="filter-grid" id="filter-grid"></div>
+          <button type="button" id="pju-export" class="apj-export">⬇ Unduh XLSX (<span id="pju-export-count">0</span>)</button>
         </div>
       </section>
     </div>
@@ -279,6 +313,8 @@ function createDOM() {
   };
   kondBarsEl = document.getElementById("kond-bars");
   uptdBarsEl = document.getElementById("uptd-bars");
+  exportBtnEl = document.getElementById("pju-export");
+  exportCountEl = document.getElementById("pju-export-count");
 
   // Collapsible sections
   panel.querySelectorAll(".section-header[data-collapse]").forEach((header) => {
@@ -370,6 +406,7 @@ function removeDOM() {
   panel = panelHeader = panelBody = panelToggle = sheetHandle = null;
   legendEl = legendContent = badgeEl = null;
   kondBarsEl = uptdBarsEl = null;
+  exportBtnEl = exportCountEl = null;
   statsEls = {};
   chipContainers = {};
   singleEls = {};
@@ -438,8 +475,25 @@ async function loadParquetData(ctx) {
 
   if (ctx?.search?.registerSearch && pjuGeoJSON) {
     ctx.search.registerSearch({
-      placeholder: "Cari ruas / ID tiang APJ...",
-      onQuery: async (q) => {
+      placeholder: "Cari ruas / ID tiang APJ / koordinat...",
+      attribution: GEO_ATTRIBUTION,
+      onQuery: async (q, { signal } = {}) => {
+        const coord = parseCoordInput(q);
+        if (coord) {
+          return [{
+            group: "Koordinat",
+            title: `📍 ${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`,
+            subtitle: "Tampilkan titik di peta",
+            action: () => focusCoord(coord.lng, coord.lat, null, null),
+          }];
+        }
+        const center = map ? [map.getCenter().lng, map.getCenter().lat] : null;
+        const places = await geocodePlaces(q, { center, signal });
+        if (signal?.aborted) return [];
+        const results = [];
+        for (const pl of places) {
+          results.push({ group: "Lokasi", title: pl.title, subtitle: pl.subtitle, action: () => focusPlace(pl) });
+        }
         const term = q.toLowerCase();
         const matches = pjuGeoJSON.features.filter((f) => {
           const p = f.properties;
@@ -448,10 +502,11 @@ async function loadParquetData(ctx) {
             String(p.Id_Tiang || "").toLowerCase().includes(term) ||
             String(p.Id_Tiang_By_Konsultan || "").toLowerCase().includes(term);
         }).slice(0, 12);
-        return matches.map((f) => {
+        for (const f of matches) {
           const p = f.properties;
           const c = f.geometry?.coordinates;
-          return {
+          results.push({
+            group: "APJ",
             title: p["Nama Ruas (Resmi)"] || "APJ",
             subtitle: `${p.Id_Tiang || p.Id_Tiang_By_Konsultan || "-"} · ${p.UPTD || "-"}`,
             action: () => {
@@ -459,8 +514,9 @@ async function loadParquetData(ctx) {
               map.flyTo({ center: c, zoom: 16, duration: 800, essential: true });
               showPjuPopup(f);
             },
-          };
-        });
+          });
+        }
+        return results;
       },
     });
   }
@@ -502,6 +558,9 @@ export const module = {
     };
     kondBarsEl.addEventListener("click", onKondBarClick);
 
+    onExportClick = () => { runApjExport(); };
+    if (exportBtnEl) exportBtnEl.addEventListener("click", onExportClick);
+
     styleLoadHandler = () => { reAddLayers(); };
     map.on("style.load", styleLoadHandler);
     basemapChangedHandler = () => { reAddLayers(); };
@@ -517,6 +576,7 @@ export const module = {
     if (pjuHitboxClickHandler) { map.off("click", "pju-hitbox", pjuHitboxClickHandler); pjuHitboxClickHandler = null; }
     if (onUptdBarClick && uptdBarsEl) { uptdBarsEl.removeEventListener("click", onUptdBarClick); onUptdBarClick = null; }
     if (onKondBarClick && kondBarsEl) { kondBarsEl.removeEventListener("click", onKondBarClick); onKondBarClick = null; }
+    if (onExportClick && exportBtnEl) { exportBtnEl.removeEventListener("click", onExportClick); onExportClick = null; }
     for (const { el, h } of chipHandlers) {
       el.removeEventListener("click", h);
     }
@@ -538,6 +598,7 @@ export const module = {
     if (map.getSource("apj-roads")) map.removeSource("apj-roads");
 
     closePopup();
+    if (coordMarker) { coordMarker.remove(); coordMarker = null; }
 
     // Shared bottom sheet teardown (header/handle/toggle listeners)
     if (sheetTeardown) {

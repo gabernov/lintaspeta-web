@@ -340,6 +340,24 @@ body.light .chip-btn.active {
   color: #6D28D9;
 }
 
+/* ── Export button ───────────────────────────────────────── */
+.apj-export {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  border-radius: var(--radius-md);
+  background: rgba(124, 58, 237, 0.12);
+  color: #C4B5FD;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.apj-export:hover { background: rgba(124, 58, 237, 0.22); }
+body.light .apj-export { color: #6D28D9; border-color: rgba(124, 58, 237, 0.35); }
+
 /* UPTD list reuses the shared .uptd-item styles from the other modes —
    no local overrides here, so switching modes never changes the look. */
 
