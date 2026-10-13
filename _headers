@@ -1,5 +1,3 @@
 /*
   Cache-Control: no-cache
-
-/maps/*/data/*
-  Cache-Control: public, max-age=1800
+  X-Lintas-Headers: on
