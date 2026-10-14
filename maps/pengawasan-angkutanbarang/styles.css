@@ -1,0 +1,93 @@
+/* Pengawasan Angkutan Barang only. Shared panel primitives (sections,
+   stats hero/KPI, .bar-*, chips, filter grid, toggle) come from the
+   globally-loaded mode stylesheets; this file adds only mode extras,
+   scoped via #panel.pw-panel. */
+
+#panel.pw-panel .panel-icon {
+  background: #0EA5E9;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.35);
+}
+#panel.pw-panel .badge {
+  background: rgba(14, 165, 233, 0.15);
+  color: #7DD3FC;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+body.light #panel.pw-panel .badge {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0369A1;
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.pw-hero-sub { font-size: 11px; color: var(--text-muted); }
+.pw-hero-sub strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+.pw-kpi-3 { grid-template-columns: repeat(3, 1fr); }
+
+.pw-bars-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px;
+}
+.pw-bars-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px;
+}
+.pw-muted { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.pw-bars { display: flex; flex-direction: column; gap: 8px; }
+
+.pw-bar {
+  display: flex; flex-direction: column; gap: 4px; width: 100%;
+  padding: 7px 10px; border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); background: var(--bg-elevated);
+  cursor: pointer; font-family: inherit; text-align: left;
+  transition: all 150ms ease;
+}
+.pw-bar:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+.pw-bar.on { border-color: rgba(14, 165, 233, 0.45); }
+.pw-bar:not(.on) { opacity: 0.45; }
+.pw-bar:not(.on) .bar-fill { opacity: 0.35; }
+
+.pw-reset {
+  width: 100%; margin-top: 12px; padding: 9px 12px;
+  border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  background: var(--bg-elevated); color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 150ms ease;
+}
+.pw-reset:hover { border-color: var(--border-strong); color: var(--text-primary); background: var(--bg-tertiary); }
+
+.pw-export {
+  width: 100%; margin-top: 12px; padding: 10px 12px;
+  border: 1px solid rgba(14, 165, 233, 0.45); border-radius: var(--radius-md);
+  background: rgba(14, 165, 233, 0.12); color: #7DD3FC;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 150ms ease;
+}
+.pw-export:hover { background: rgba(14, 165, 233, 0.22); }
+body.light .pw-export { color: #0369A1; border-color: rgba(14, 165, 233, 0.35); }
+
+.pw-layers { display: flex; flex-direction: column; gap: 6px; }
+.pw-layer-group {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted); margin: 8px 0 2px;
+}
+.pw-layer-group:first-child { margin-top: 0; }
+.pw-layer-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); background: var(--bg-elevated);
+  cursor: pointer; font-family: inherit; text-align: left; transition: all 150ms ease;
+}
+.pw-layer-row:hover { border-color: var(--border-strong); background: var(--bg-tertiary); }
+.pw-layer-row.is-key { cursor: default; }
+.pw-layer-row.is-key:hover { border-color: var(--border-default); background: var(--bg-elevated); }
+.pw-layer-row:not(.on):not(.is-key) { opacity: 0.45; }
+.pw-layer-swatch { width: 16px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.pw-layer-swatch.is-dot { width: 12px; height: 12px; border-radius: 50%; }
+.pw-layer-label { flex: 1; font-size: 12px; color: var(--text-secondary); }
+.pw-layer-row.on .pw-layer-label { color: var(--text-primary); }
+.pw-layer-state { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+.pw-empty { font-size: 11px; color: var(--text-muted); padding: 8px 0; }
+
+.pw-drop-hint { margin-top: 3px; font-size: 10px; color: #64748b; }
