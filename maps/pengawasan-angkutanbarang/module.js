@@ -5,7 +5,7 @@ import { parseCoordInput, geocodePlaces, GEO_ATTRIBUTION } from "../../shared-co
 import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config, {
   JENIS, JENIS_ORDER, JENIS_COLORS, JENIS_LABELS,
-  KELAS_ORDER,
+  KELAS_ORDER, KELAS_ICONS,
   UPTD_COLORS, UPTD_ORDER, UPTD_DEFAULT, UPTD_LABEL,
   enrichPengawasan, kabkotaLabel,
 } from "./config.js";
@@ -35,7 +35,7 @@ let coordMarker = null;
 
 let panel, panelHeader, panelBody, panelToggle, sheetHandle;
 let fileDrop, fileInput, fileStatus;
-let heroTotal, heroDenom, kpiRuas, kpiUptd, kpiKab, badgeEl;
+let heroTotal, heroDenom, heroLabel, heroUnit, kpiRuas, kpiUptd, kpiKab, badgeEl;
 let barsJenis, barsUptd, barsKab, kabCountEl;
 let chipEls = {};
 let layerRows;
@@ -145,10 +145,23 @@ function applyLayerVisibility() {
   }
 }
 
+// Label the hero by what the points actually are. The dataset is road signs,
+// so naming them "Titik Pengawasan" reads wrong: when every jenis is a rambu
+// (or a single jenis is present) say so instead of a generic "titik".
+function heroNoun(features) {
+  const keys = new Set(features.map((f) => f.properties?.jenis).filter(Boolean));
+  if (keys.size === 1) return JENIS_LABELS[[...keys][0]] || "Titik Pengawasan";
+  if (keys.size > 0 && [...keys].every((k) => String(k).startsWith("rambu"))) return "Rambu Jalan";
+  return "Titik Pengawasan";
+}
+
 function updateStats() {
   if (!pengawasanGeoJSON) return;
   const all = pengawasanGeoJSON.features;
   const shown = all.filter((f) => matches(f, null));
+  const noun = heroNoun(all);
+  if (heroLabel) heroLabel.textContent = `Total ${noun}`;
+  if (heroUnit) heroUnit.textContent = noun.startsWith("Rambu") ? "rambu" : "titik";
   if (heroTotal) heroTotal.textContent = shown.length.toLocaleString();
   if (heroDenom) heroDenom.textContent = all.length.toLocaleString();
   if (badgeEl) badgeEl.textContent = shown.length.toLocaleString();
@@ -460,6 +473,7 @@ const GLYPH_BY_JENIS = {
   rambu_mst: { glyph: "truck", scale: 0.55, dy: 4 },
   rambu_pembatasan: { glyph: "prohibit", scale: 0.95, dy: 0 },
   tambang: { glyph: "ore", scale: 0.95, dy: 0 },
+  posko: { glyph: "post", scale: 0.95, dy: 0 },
 };
 
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -507,6 +521,21 @@ function drawOreGlyph(ctx) {
   ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
 }
 
+function drawPostGlyph(ctx) {
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(12, -1);
+  ctx.lineTo(-12, -1);
+  ctx.closePath();
+  ctx.fill();
+  roundRectPath(ctx, -9, -1, 18, 12, 1.5);
+  ctx.fill();
+  ctx.fillStyle = "#0F172A";
+  roundRectPath(ctx, -3, 3, 6, 8, 1);
+  ctx.fill();
+}
+
 function buildIcon(jenis) {
   const def = JENIS.find((j) => j.key === jenis) || JENIS[0];
   const g = GLYPH_BY_JENIS[def.key];
@@ -533,9 +562,51 @@ function buildIcon(jenis) {
   ctx.scale(g.scale, g.scale);
   if (g.glyph === "prohibit") drawProhibitGlyph(ctx);
   else if (g.glyph === "ore") drawOreGlyph(ctx);
+  else if (g.glyph === "post") drawPostGlyph(ctx);
   else drawTruckGlyph(ctx);
   ctx.restore();
 
+  return { width: S, height: S, data: new Uint8Array(ctx.getImageData(0, 0, S, S).data) };
+}
+
+function drawRomanGlyph(ctx, kelas) {
+  const bars = kelas === "I" ? 1 : kelas === "II" ? 2 : 3;
+  const w = 3.4;
+  const gap = 5.2;
+  const total = bars * w + (bars - 1) * gap;
+  let x = -total / 2;
+  ctx.fillStyle = "#111827";
+  for (let i = 0; i < bars; i++) {
+    ctx.fillRect(x, -11, w, 22);
+    x += w + gap;
+  }
+}
+
+function buildKelasIcon(kelas) {
+  const S = ICON_SIZE;
+  const c = S / 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = S;
+  canvas.height = S;
+  const ctx = canvas.getContext("2d");
+  ctx.beginPath();
+  ctx.arc(c, c, S / 2 - 3, 0, Math.PI * 2);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(c, c, S / 2 - 5, 0, Math.PI * 2);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#EF4444";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(c, c, S / 2 - 2.5, 0, Math.PI * 2);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(15,23,42,0.55)";
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(c, c);
+  drawRomanGlyph(ctx, kelas);
+  ctx.restore();
   return { width: S, height: S, data: new Uint8Array(ctx.getImageData(0, 0, S, S).data) };
 }
 
@@ -548,6 +619,12 @@ function ensureIcons() {
   for (const j of JENIS) {
     try {
       if (!map.hasImage(j.icon)) map.addImage(j.icon, buildIcon(j.key));
+    } catch (e) {}
+  }
+  for (const k of KELAS_ORDER) {
+    const id = KELAS_ICONS[k];
+    try {
+      if (id && !map.hasImage(id)) map.addImage(id, buildKelasIcon(k));
     } catch (e) {}
   }
 }
@@ -602,9 +679,9 @@ function createDOM() {
     <div id="panel-body" role="region" aria-label="Informasi data pengawasan angkutan barang">
       ${section("stats", "Statistik", true, `
         <div class="stats-hero">
-          <div class="stats-hero-label">Total Titik Pengawasan</div>
+          <div class="stats-hero-label" id="pw-hero-label">Total Titik Pengawasan</div>
           <div class="stats-hero-value" id="pw-total">0</div>
-          <div class="pw-hero-sub">dari <strong id="pw-denom">0</strong> titik</div>
+          <div class="pw-hero-sub">dari <strong id="pw-denom">0</strong> <span id="pw-hero-unit">titik</span></div>
         </div>
         <div class="stats-kpi pw-kpi-3">
           <div class="kpi-chip"><span class="kpi-label">Ruas</span><span class="kpi-value" id="pw-kpi-ruas">0</span></div>
@@ -653,6 +730,8 @@ function createDOM() {
   badgeEl = panel.querySelector("#pw-badge");
   heroTotal = panel.querySelector("#pw-total");
   heroDenom = panel.querySelector("#pw-denom");
+  heroLabel = panel.querySelector("#pw-hero-label");
+  heroUnit = panel.querySelector("#pw-hero-unit");
   kpiRuas = panel.querySelector("#pw-kpi-ruas");
   kpiUptd = panel.querySelector("#pw-kpi-uptd");
   kpiKab = panel.querySelector("#pw-kpi-kab");
@@ -672,7 +751,7 @@ function createDOM() {
 function removeDOM() {
   if (panel?.parentNode) panel.parentNode.removeChild(panel);
   panel = panelHeader = panelBody = panelToggle = sheetHandle = null;
-  badgeEl = heroTotal = heroDenom = kpiRuas = kpiUptd = kpiKab = null;
+  badgeEl = heroTotal = heroDenom = heroLabel = heroUnit = kpiRuas = kpiUptd = kpiKab = null;
   barsJenis = barsUptd = barsKab = kabCountEl = null;
   chipEls = {};
   layerRows = null;
@@ -763,9 +842,13 @@ export const module = {
     // an icon the symbol layer asks for before the re-add runs.
     trackMap("styleimagemissing", (e) => {
       const id = e?.id;
-      if (id && id.startsWith("pw-jenis-") && map && !map.hasImage(id)) {
+      if (!id || !map || map.hasImage(id)) return;
+      if (id.startsWith("pw-jenis-")) {
         const j = JENIS.find((x) => x.icon === id);
         if (j) map.addImage(id, buildIcon(j.key));
+      } else if (id.startsWith("pw-kelas-")) {
+        const k = KELAS_ORDER.find((key) => KELAS_ICONS[key] === id);
+        if (k) map.addImage(id, buildKelasIcon(k));
       }
     });
 

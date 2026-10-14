@@ -7,11 +7,13 @@ export const JENIS = [
   { key: "rambu_mst", label: "Rambu MST", color: "#2563EB", icon: "pw-jenis-rambu_mst", shape: "triangle" },
   { key: "rambu_pembatasan", label: "Rambu Pembatasan Angkutan", color: "#F59E0B", icon: "pw-jenis-rambu_pembatasan", shape: "square" },
   { key: "tambang", label: "Lokasi Tambang", color: "#7C3AED", icon: "pw-jenis-tambang", shape: "diamond" },
+  { key: "posko", label: "Titik Posko Pengawasan", color: "#0D9488", icon: "pw-jenis-posko", shape: "square" },
 ];
 export const JENIS_ORDER = JENIS.map((j) => j.key);
 export const JENIS_COLORS = Object.fromEntries(JENIS.map((j) => [j.key, j.color]));
 export const JENIS_LABELS = Object.fromEntries(JENIS.map((j) => [j.key, j.label]));
 export const JENIS_ICONS = Object.fromEntries(JENIS.map((j) => [j.key, j.icon]));
+export const KELAS_ICONS = { I: "pw-kelas-I", II: "pw-kelas-II", III: "pw-kelas-III" };
 
 export const KELAS_ORDER = ["I", "II", "III"];
 
@@ -130,13 +132,27 @@ export default {
       type: "symbol",
       source: "pengawasan",
       layout: {
+        // Kelas-jalan signs mimic the real road-class sign (white disc, red
+        // ring, Roman numeral) and vary by kelas_jalan; other jenis use their
+        // own shape.
         "icon-image": [
-          "match", ["get", "jenis"],
-          "rambu_kelas_jalan", JENIS_ICONS["rambu_kelas_jalan"],
-          "rambu_mst", JENIS_ICONS["rambu_mst"],
-          "rambu_pembatasan", JENIS_ICONS["rambu_pembatasan"],
-          "tambang", JENIS_ICONS["tambang"],
-          JENIS_ICONS["rambu_kelas_jalan"],
+          "case",
+          ["==", ["get", "jenis"], "rambu_kelas_jalan"],
+          [
+            "match", ["get", "kelas_jalan"],
+            "I", KELAS_ICONS["I"],
+            "II", KELAS_ICONS["II"],
+            "III", KELAS_ICONS["III"],
+            KELAS_ICONS["I"],
+          ],
+          [
+            "match", ["get", "jenis"],
+            "rambu_mst", JENIS_ICONS["rambu_mst"],
+            "rambu_pembatasan", JENIS_ICONS["rambu_pembatasan"],
+            "tambang", JENIS_ICONS["tambang"],
+            "posko", JENIS_ICONS["posko"],
+            JENIS_ICONS["rambu_kelas_jalan"],
+          ],
         ],
         "icon-size": 0.55,
         "icon-allow-overlap": true,
