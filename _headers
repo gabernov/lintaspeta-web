@@ -1,6 +1,0 @@
-# Portal assets are not content-hashed, so Cloudflare Pages' default
-# (max-age=14400) left browsers showing a stale module.js for up to four hours
-# after a deploy. Revalidate instead: unchanged files answer 304, changed files
-# are picked up on the next load.
-/*
-  Cache-Control: public, max-age=0, must-revalidate
