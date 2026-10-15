@@ -5,7 +5,7 @@ import { parseCoordInput, geocodePlaces, GEO_ATTRIBUTION } from "../../shared-co
 import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
 import config, {
   JENIS, JENIS_ORDER, JENIS_COLORS, JENIS_LABELS,
-  KELAS_ORDER, KELAS_ICONS,
+  KELAS_ORDER,
   UPTD_COLORS, UPTD_ORDER, UPTD_DEFAULT, UPTD_LABEL,
   enrichPengawasan, kabkotaLabel,
 } from "./config.js";
@@ -463,18 +463,31 @@ function fitBounds() {
 }
 
 // ── Canvas-drawn map icons ──────────────────────────────────
-// MapLibre v5 addImage() takes raw RGBA pixels, so each sign is rendered
-// on an offscreen canvas: a white halo (legible on dark basemaps), the
-// coloured shape, a dark outline (legible on light basemaps) and a white
-// pictogram. No external assets or icon fonts required.
+// MapLibre v5 addImage() takes raw RGBA pixels, so every icon is rendered on an
+// offscreen canvas (no external assets or icon fonts). The three rambu jenis are
+// drawn as the actual Indonesian signs — a white disc inside a red ring with the
+// sign's own pictogram — while tambang/posko are not traffic signs and use a
+// white badge carrying their illustration.
 const ICON_SIZE = 40;
-const GLYPH_BY_JENIS = {
-  rambu_kelas_jalan: { glyph: "truck", scale: 0.92, dy: 0 },
-  rambu_mst: { glyph: "truck", scale: 0.55, dy: 4 },
-  rambu_pembatasan: { glyph: "prohibit", scale: 0.95, dy: 0 },
-  tambang: { glyph: "ore", scale: 0.95, dy: 0 },
-  posko: { glyph: "post", scale: 0.95, dy: 0 },
-};
+const SIGN_RED = "#EF4444";
+const INK = "#111827";
+const OUTLINE = "#0F172A";
+
+// MST tonnage follows the road class: kelas I carries 10 T, kelas II/III 8 T.
+const MST_TON_BY_KELAS = { I: 10, II: 8, III: 8 };
+
+const ICON_SPECS = [
+  { id: "pw-kelas-I", jenis: "rambu_kelas_jalan", kelas: "I" },
+  { id: "pw-kelas-II", jenis: "rambu_kelas_jalan", kelas: "II" },
+  { id: "pw-kelas-III", jenis: "rambu_kelas_jalan", kelas: "III" },
+  { id: "pw-mst-10", jenis: "rambu_mst", kelas: "I" },
+  { id: "pw-mst-8", jenis: "rambu_mst", kelas: "II" },
+  { id: "pw-jenis-rambu_kelas_jalan", jenis: "rambu_kelas_jalan", kelas: "I" },
+  { id: "pw-jenis-rambu_mst", jenis: "rambu_mst", kelas: "II" },
+  { id: "pw-jenis-rambu_pembatasan", jenis: "rambu_pembatasan", kelas: "" },
+  { id: "pw-jenis-tambang", jenis: "tambang", kelas: "" },
+  { id: "pw-jenis-posko", jenis: "posko", kelas: "" },
+];
 
 function roundRectPath(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -487,86 +500,36 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function shapePath(ctx, shape, S) {
-  const m = 4, c = S / 2;
+function signBase(ctx, S) {
+  const c = S / 2;
   ctx.beginPath();
-  if (shape === "circle") ctx.arc(c, c, S / 2 - m, 0, Math.PI * 2);
-  else if (shape === "square") roundRectPath(ctx, m, m, S - 2 * m, S - 2 * m, 7);
-  else if (shape === "triangle") { ctx.moveTo(c, m + 1); ctx.lineTo(S - m - 1, S - m - 1); ctx.lineTo(m + 1, S - m - 1); ctx.closePath(); }
-  else { ctx.moveTo(c, m); ctx.lineTo(S - m, c); ctx.lineTo(c, S - m); ctx.lineTo(m, c); ctx.closePath(); }
-}
-
-function drawTruckGlyph(ctx) {
+  ctx.arc(c, c, S / 2 - 3, 0, Math.PI * 2);
   ctx.fillStyle = "#FFFFFF";
-  roundRectPath(ctx, -14, -8, 18, 12, 2);
   ctx.fill();
-  roundRectPath(ctx, 4, -3, 9, 7, 1.6);
-  ctx.fill();
-  ctx.fillStyle = "#0F172A";
-  ctx.beginPath(); ctx.arc(-8, 5.5, 2.8, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(7, 5.5, 2.8, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawProhibitGlyph(ctx) {
-  ctx.strokeStyle = "#FFFFFF";
-  ctx.lineWidth = 4.5;
-  ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-7, 7); ctx.lineTo(7, -7); ctx.stroke();
-}
-
-function drawOreGlyph(ctx) {
-  ctx.fillStyle = "#FFFFFF";
-  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#0F172A";
-  ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawPostGlyph(ctx) {
-  ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(12, -1);
-  ctx.lineTo(-12, -1);
-  ctx.closePath();
-  ctx.fill();
-  roundRectPath(ctx, -9, -1, 18, 12, 1.5);
-  ctx.fill();
-  ctx.fillStyle = "#0F172A";
-  roundRectPath(ctx, -3, 3, 6, 8, 1);
-  ctx.fill();
+  ctx.arc(c, c, S / 2 - 5, 0, Math.PI * 2);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = SIGN_RED;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(c, c, S / 2 - 2.5, 0, Math.PI * 2);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(15,23,42,0.55)";
+  ctx.stroke();
 }
 
-function buildIcon(jenis) {
-  const def = JENIS.find((j) => j.key === jenis) || JENIS[0];
-  const g = GLYPH_BY_JENIS[def.key];
-  const S = ICON_SIZE;
-  const canvas = document.createElement("canvas");
-  canvas.width = S; canvas.height = S;
-  const ctx = canvas.getContext("2d");
-  ctx.lineJoin = "round";
-
-  shapePath(ctx, def.shape, S);
+function badgeBase(ctx, S) {
+  const m = 3;
+  roundRectPath(ctx, m, m, S - 2 * m, S - 2 * m, 9);
   ctx.strokeStyle = "rgba(255,255,255,0.95)";
   ctx.lineWidth = 5;
   ctx.stroke();
-
-  shapePath(ctx, def.shape, S);
-  ctx.fillStyle = def.color;
+  roundRectPath(ctx, m, m, S - 2 * m, S - 2 * m, 9);
+  ctx.fillStyle = "#FFFFFF";
   ctx.fill();
-  ctx.strokeStyle = "#0F172A";
+  ctx.strokeStyle = OUTLINE;
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  ctx.save();
-  ctx.translate(S / 2, S / 2 + g.dy);
-  ctx.scale(g.scale, g.scale);
-  if (g.glyph === "prohibit") drawProhibitGlyph(ctx);
-  else if (g.glyph === "ore") drawOreGlyph(ctx);
-  else if (g.glyph === "post") drawPostGlyph(ctx);
-  else drawTruckGlyph(ctx);
-  ctx.restore();
-
-  return { width: S, height: S, data: new Uint8Array(ctx.getImageData(0, 0, S, S).data) };
 }
 
 function drawRomanGlyph(ctx, kelas) {
@@ -575,39 +538,193 @@ function drawRomanGlyph(ctx, kelas) {
   const gap = 5.2;
   const total = bars * w + (bars - 1) * gap;
   let x = -total / 2;
-  ctx.fillStyle = "#111827";
+  ctx.fillStyle = INK;
   for (let i = 0; i < bars; i++) {
     ctx.fillRect(x, -11, w, 22);
     x += w + gap;
   }
 }
 
-function buildKelasIcon(kelas) {
-  const S = ICON_SIZE;
-  const c = S / 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = S;
-  canvas.height = S;
-  const ctx = canvas.getContext("2d");
+function drawMstGlyph(ctx, ton) {
+  ctx.fillStyle = INK;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "bold 13px 'Fira Sans', system-ui, sans-serif";
+  ctx.fillText(String(ton), -2, -1.5);
+  ctx.font = "bold 6.5px 'Fira Sans', system-ui, sans-serif";
+  ctx.fillText("T", 8.5, -6.5);
+
+  ctx.fillRect(-1.1, 0.8, 2.2, 3.2);
   ctx.beginPath();
-  ctx.arc(c, c, S / 2 - 3, 0, Math.PI * 2);
-  ctx.fillStyle = "#FFFFFF";
+  ctx.moveTo(-3.3, 3.8);
+  ctx.lineTo(3.3, 3.8);
+  ctx.lineTo(0, 6.8);
+  ctx.closePath();
+  ctx.fill();
+
+  for (const x of [-11, -8.4, 8.4, 11]) {
+    roundRectPath(ctx, x - 1.2, 6.4, 2.4, 6.6, 1.1);
+    ctx.fill();
+  }
+  roundRectPath(ctx, -11, 8.5, 22, 2.4, 1.2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(c, c, S / 2 - 5, 0, Math.PI * 2);
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "#EF4444";
+  ctx.ellipse(0, 9.7, 3.9, 2.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawTruckSilhouette(ctx) {
+  ctx.fillStyle = INK;
+  roundRectPath(ctx, -2.5, -7, 12.5, 10, 1.2);
+  ctx.fill();
+  roundRectPath(ctx, -11, -3, 7.5, 6, 1.2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(-6.6, 4.4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(6.4, 4.4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawProhibitSlash(ctx, S) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, S / 2 - 6.2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.translate(S / 2, S / 2);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(-S, -3.5, S * 2, 7);
+  ctx.fillStyle = SIGN_RED;
+  ctx.fillRect(-S, -2.2, S * 2, 4.4);
+  ctx.restore();
+}
+
+function drawPickaxeGlyph(ctx) {
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 1.4;
+  ctx.fillStyle = "#334155";
+  ctx.beginPath();
+  ctx.moveTo(0.5, 13.5);
+  ctx.lineTo(4, 3.5);
+  ctx.lineTo(10, 0.5);
+  ctx.lineTo(13.5, 5);
+  ctx.lineTo(13.5, 13.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#1E293B";
+  for (const [cx, cy, r, rot] of [
+    [-11.5, -3.5, 2.5, 0.4],
+    [-6.5, -8, 2.1, -0.3],
+    [-1.5, -11.5, 1.8, 0.5],
+  ]) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    roundRectPath(ctx, -r, -r, r * 2, r * 2, 0.7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(-4.5, 2.5);
+  ctx.rotate(-Math.PI / 3);
+  ctx.fillStyle = "#F59E0B";
+  roundRectPath(ctx, -12.5, -1.7, 25, 3.4, 1.7);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  for (let i = 0; i < 3; i++) ctx.fillRect(-11.5 + i * 2.6, -1.7, 1, 3.4);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(2, -7.5);
+  ctx.rotate(Math.PI / 6);
+  ctx.fillStyle = "#94A3B8";
+  roundRectPath(ctx, -10.5, -2.1, 21, 4.2, 2.1);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#64748B";
+  roundRectPath(ctx, -3.2, -3, 6.4, 6, 1.5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTentGlyph(ctx) {
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(-13.5, -3.5);
+  ctx.quadraticCurveTo(-7, -13, 0, -13);
+  ctx.quadraticCurveTo(7, -13, 13.5, -3.5);
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(c, c, S / 2 - 2.5, 0, Math.PI * 2);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = "rgba(15,23,42,0.55)";
+  ctx.moveTo(-13.5, -3.5);
+  ctx.lineTo(13.5, -3.5);
   ctx.stroke();
+  for (const [x, yEnd] of [
+    [-13.5, 13.5],
+    [-5, 10],
+    [5, 10],
+    [13.5, 13.5],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x, -3.5);
+    ctx.lineTo(x, yEnd);
+    ctx.stroke();
+  }
+}
+
+function drawGlyph(ctx, jenis, kelas) {
+  if (jenis === "rambu_kelas_jalan") drawRomanGlyph(ctx, kelas);
+  else if (jenis === "rambu_mst") drawMstGlyph(ctx, MST_TON_BY_KELAS[kelas] ?? 8);
+  else if (jenis === "rambu_pembatasan") drawTruckSilhouette(ctx);
+  else if (jenis === "tambang") drawPickaxeGlyph(ctx);
+  else drawTentGlyph(ctx);
+}
+
+function newIconCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = ICON_SIZE;
+  canvas.height = ICON_SIZE;
+  const ctx = canvas.getContext("2d");
+  ctx.lineJoin = "round";
+  return { canvas, ctx };
+}
+
+function toIconImage(ctx) {
+  return {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    data: new Uint8Array(ctx.getImageData(0, 0, ICON_SIZE, ICON_SIZE).data),
+  };
+}
+
+const SIGN_JENIS = new Set(["rambu_kelas_jalan", "rambu_mst", "rambu_pembatasan"]);
+
+function buildJenisIcon(jenis, kelas) {
+  const { ctx } = newIconCanvas();
+  const S = ICON_SIZE;
+  if (SIGN_JENIS.has(jenis)) signBase(ctx, S);
+  else badgeBase(ctx, S);
   ctx.save();
-  ctx.translate(c, c);
-  drawRomanGlyph(ctx, kelas);
+  ctx.translate(S / 2, S / 2);
+  drawGlyph(ctx, jenis, kelas);
   ctx.restore();
-  return { width: S, height: S, data: new Uint8Array(ctx.getImageData(0, 0, S, S).data) };
+  if (jenis === "rambu_pembatasan") drawProhibitSlash(ctx, S);
+  return toIconImage(ctx);
+}
+
+function buildIconById(id) {
+  const spec = ICON_SPECS.find((s) => s.id === id);
+  return spec ? buildJenisIcon(spec.jenis, spec.kelas) : null;
 }
 
 // isStyleLoaded() stays false while sources stream in (e.g. mid globe
@@ -616,15 +733,9 @@ function buildKelasIcon(kelas) {
 // ready, rather than skipping icons and leaving unused ones unregistered.
 function ensureIcons() {
   if (!map) return;
-  for (const j of JENIS) {
+  for (const spec of ICON_SPECS) {
     try {
-      if (!map.hasImage(j.icon)) map.addImage(j.icon, buildIcon(j.key));
-    } catch (e) {}
-  }
-  for (const k of KELAS_ORDER) {
-    const id = KELAS_ICONS[k];
-    try {
-      if (id && !map.hasImage(id)) map.addImage(id, buildKelasIcon(k));
+      if (!map.hasImage(spec.id)) map.addImage(spec.id, buildJenisIcon(spec.jenis, spec.kelas));
     } catch (e) {}
   }
 }
@@ -843,13 +954,8 @@ export const module = {
     trackMap("styleimagemissing", (e) => {
       const id = e?.id;
       if (!id || !map || map.hasImage(id)) return;
-      if (id.startsWith("pw-jenis-")) {
-        const j = JENIS.find((x) => x.icon === id);
-        if (j) map.addImage(id, buildIcon(j.key));
-      } else if (id.startsWith("pw-kelas-")) {
-        const k = KELAS_ORDER.find((key) => KELAS_ICONS[key] === id);
-        if (k) map.addImage(id, buildKelasIcon(k));
-      }
+      const image = buildIconById(id);
+      if (image) map.addImage(id, image);
     });
 
     return loadParquetData(ctx);

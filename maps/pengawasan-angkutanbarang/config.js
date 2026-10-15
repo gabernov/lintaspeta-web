@@ -1,19 +1,22 @@
 import { escHtml } from "../../shared-core/js/ui-core.js";
 
-// Freight-supervision point types. `shape` drives the canvas-drawn map icon
-// (see module.js) so the sign silhouette matches the data meaning.
+// Freight-supervision point types. `color` drives the legend and filter bars;
+// the map icon itself is drawn per jenis in module.js (real sign artwork for
+// the rambu jenis, an illustration badge for tambang/posko).
 export const JENIS = [
-  { key: "rambu_kelas_jalan", label: "Rambu Kelas Jalan", color: "#EF4444", icon: "pw-jenis-rambu_kelas_jalan", shape: "circle" },
-  { key: "rambu_mst", label: "Rambu MST", color: "#2563EB", icon: "pw-jenis-rambu_mst", shape: "triangle" },
-  { key: "rambu_pembatasan", label: "Rambu Pembatasan Angkutan", color: "#F59E0B", icon: "pw-jenis-rambu_pembatasan", shape: "square" },
-  { key: "tambang", label: "Lokasi Tambang", color: "#7C3AED", icon: "pw-jenis-tambang", shape: "diamond" },
-  { key: "posko", label: "Titik Posko Pengawasan", color: "#0D9488", icon: "pw-jenis-posko", shape: "square" },
+  { key: "rambu_kelas_jalan", label: "Rambu Kelas Jalan", color: "#EF4444", icon: "pw-jenis-rambu_kelas_jalan" },
+  { key: "rambu_mst", label: "Rambu MST", color: "#2563EB", icon: "pw-jenis-rambu_mst" },
+  { key: "rambu_pembatasan", label: "Rambu Pembatasan Angkutan", color: "#F59E0B", icon: "pw-jenis-rambu_pembatasan" },
+  { key: "tambang", label: "Lokasi Tambang", color: "#7C3AED", icon: "pw-jenis-tambang" },
+  { key: "posko", label: "Titik Posko Pengawasan", color: "#0D9488", icon: "pw-jenis-posko" },
 ];
 export const JENIS_ORDER = JENIS.map((j) => j.key);
 export const JENIS_COLORS = Object.fromEntries(JENIS.map((j) => [j.key, j.color]));
 export const JENIS_LABELS = Object.fromEntries(JENIS.map((j) => [j.key, j.label]));
 export const JENIS_ICONS = Object.fromEntries(JENIS.map((j) => [j.key, j.icon]));
 export const KELAS_ICONS = { I: "pw-kelas-I", II: "pw-kelas-II", III: "pw-kelas-III" };
+// MST signs show the permitted axle load, which follows the road class.
+export const MST_ICONS = { "10": "pw-mst-10", "8": "pw-mst-8" };
 
 export const KELAS_ORDER = ["I", "II", "III"];
 
@@ -132,9 +135,9 @@ export default {
       type: "symbol",
       source: "pengawasan",
       layout: {
-        // Kelas-jalan signs mimic the real road-class sign (white disc, red
-        // ring, Roman numeral) and vary by kelas_jalan; other jenis use their
-        // own shape.
+        // Kelas-jalan and MST signs vary by the road class the point sits on
+        // (MST shows the class's permitted axle load); the other jenis each
+        // have a single icon.
         "icon-image": [
           "case",
           ["==", ["get", "jenis"], "rambu_kelas_jalan"],
@@ -146,12 +149,20 @@ export default {
             KELAS_ICONS["I"],
           ],
           [
-            "match", ["get", "jenis"],
-            "rambu_mst", JENIS_ICONS["rambu_mst"],
-            "rambu_pembatasan", JENIS_ICONS["rambu_pembatasan"],
-            "tambang", JENIS_ICONS["tambang"],
-            "posko", JENIS_ICONS["posko"],
-            JENIS_ICONS["rambu_kelas_jalan"],
+            "case",
+            ["==", ["get", "jenis"], "rambu_mst"],
+            [
+              "match", ["get", "kelas_jalan"],
+              "I", MST_ICONS["10"],
+              MST_ICONS["8"],
+            ],
+            [
+              "match", ["get", "jenis"],
+              "rambu_pembatasan", JENIS_ICONS["rambu_pembatasan"],
+              "tambang", JENIS_ICONS["tambang"],
+              "posko", JENIS_ICONS["posko"],
+              JENIS_ICONS["rambu_kelas_jalan"],
+            ],
           ],
         ],
         "icon-size": 0.55,
