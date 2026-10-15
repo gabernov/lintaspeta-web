@@ -580,16 +580,40 @@ function drawMstGlyph(ctx, ton) {
 
 function drawTruckSilhouette(ctx) {
   ctx.fillStyle = INK;
-  roundRectPath(ctx, -2.5, -7, 12.5, 10, 1.2);
+  roundRectPath(ctx, -3, -8, 16, 10.5, 0.8);
   ctx.fill();
-  roundRectPath(ctx, -11, -3, 7.5, 6, 1.2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(-6.6, 4.4, 2.5, 0, Math.PI * 2);
+  roundRectPath(ctx, -6.5, 1.8, 22.5, 2.2, 0.6);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(6.4, 4.4, 2.5, 0, Math.PI * 2);
+  ctx.moveTo(-13.5, 4);
+  ctx.lineTo(-13.5, -0.5);
+  ctx.quadraticCurveTo(-13.5, -3.6, -10.5, -3.6);
+  ctx.lineTo(-3, -3.6);
+  ctx.lineTo(-3, 4);
+  ctx.closePath();
   ctx.fill();
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.moveTo(-11.6, -2.2);
+  ctx.lineTo(-4.4, -2.2);
+  ctx.lineTo(-4.4, 1);
+  ctx.lineTo(-11.6, 1);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = INK;
+  for (const x of [-9, 8.5]) {
+    ctx.beginPath();
+    ctx.arc(x, 4.6, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#FFFFFF";
+  for (const x of [-9, 8.5]) {
+    ctx.beginPath();
+    ctx.arc(x, 4.6, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawProhibitSlash(ctx, S) {
@@ -606,99 +630,171 @@ function drawProhibitSlash(ctx, S) {
   ctx.restore();
 }
 
-function drawPickaxeGlyph(ctx) {
+function drawMineGlyph(ctx) {
   ctx.strokeStyle = OUTLINE;
   ctx.lineWidth = 1.4;
-  ctx.fillStyle = "#334155";
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  const topY = -4;
+  const baseY = 14;
+  const topL = -3;
+  const topR = 0;
+  const baseL = -8;
+  const baseR = 5;
+  const xAt = (t, l, r) => l + (r - l) * t;
+
+  ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
-  ctx.moveTo(0.5, 13.5);
-  ctx.lineTo(4, 3.5);
-  ctx.lineTo(10, 0.5);
-  ctx.lineTo(13.5, 5);
-  ctx.lineTo(13.5, 13.5);
+  ctx.moveTo(topL, topY);
+  ctx.lineTo(topR, topY);
+  ctx.lineTo(baseR, baseY);
+  ctx.lineTo(baseL, baseY);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#1E293B";
-  for (const [cx, cy, r, rot] of [
-    [-11.5, -3.5, 2.5, 0.4],
-    [-6.5, -8, 2.1, -0.3],
-    [-1.5, -11.5, 1.8, 0.5],
-  ]) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    roundRectPath(ctx, -r, -r, r * 2, r * 2, 0.7);
-    ctx.fill();
+  const rails = [topY, 2.5, 9, baseY];
+  for (let i = 1; i < rails.length - 1; i++) {
+    const t = (rails[i] - topY) / (baseY - topY);
+    ctx.beginPath();
+    ctx.moveTo(xAt(t, topL, baseL), rails[i]);
+    ctx.lineTo(xAt(t, topR, baseR), rails[i]);
     ctx.stroke();
-    ctx.restore();
   }
+  for (let i = 0; i < rails.length - 1; i++) {
+    const t1 = (rails[i] - topY) / (baseY - topY);
+    const t2 = (rails[i + 1] - topY) / (baseY - topY);
+    ctx.beginPath();
+    ctx.moveTo(xAt(t1, topL, baseL), rails[i]);
+    ctx.lineTo(xAt(t2, topR, baseR), rails[i + 1]);
+    ctx.moveTo(xAt(t1, topR, baseR), rails[i]);
+    ctx.lineTo(xAt(t2, topL, baseL), rails[i + 1]);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(baseL - 2.5, baseY);
+  ctx.lineTo(baseR + 2.5, baseY);
+  ctx.stroke();
 
   ctx.save();
-  ctx.translate(-4.5, 2.5);
-  ctx.rotate(-Math.PI / 3);
-  ctx.fillStyle = "#F59E0B";
-  roundRectPath(ctx, -12.5, -1.7, 25, 3.4, 1.7);
+  ctx.translate(-4.2, -1.2);
+  ctx.rotate(-0.43);
+  ctx.fillStyle = "#B6BEC9";
+  roundRectPath(ctx, -10.2, -1.9, 20.4, 3.8, 1.9);
   ctx.fill();
   ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(-13.2, 2.9, 1.7, 0, Math.PI * 2);
+  ctx.fillStyle = "#B6BEC9";
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i - Math.PI / 6;
+    const px = 9 + Math.cos(a) * 5.2;
+    const py = -7.5 + Math.sin(a) * 5.2;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#29B6F6";
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(9, -7.5, 2.4, 0, Math.PI * 2);
   ctx.fillStyle = INK;
-  for (let i = 0; i < 3; i++) ctx.fillRect(-11.5 + i * 2.6, -1.7, 1, 3.4);
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(2, -7.5);
-  ctx.rotate(Math.PI / 6);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(9, -7.5, 1.1, 0, Math.PI * 2);
   ctx.fillStyle = "#94A3B8";
-  roundRectPath(ctx, -10.5, -2.1, 21, 4.2, 2.1);
   ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(9, -2.3);
+  ctx.lineTo(9, 1.4);
   ctx.stroke();
+
   ctx.fillStyle = "#64748B";
-  roundRectPath(ctx, -3.2, -3, 6.4, 6, 1.5);
+  roundRectPath(ctx, 6.9, 1.4, 4.2, 5.6, 1);
   ctx.fill();
   ctx.stroke();
-  ctx.restore();
 }
 
 function drawTentGlyph(ctx) {
+  ctx.fillStyle = INK;
   ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = 1.7;
-  ctx.lineCap = "round";
+  ctx.lineWidth = 1.2;
   ctx.lineJoin = "round";
+
+  const apexY = -11.5;
+  const eaveY = 2.5;
+  const bodyTopY = 4.1;
+  const bodyBotY = 14.5;
+  const bodyTopHalf = 11.5;
+  const bodyBotHalf = 13.5;
+
   ctx.beginPath();
-  ctx.moveTo(-14, -2.5);
-  ctx.quadraticCurveTo(-10.5, -11.5, -3, -12.5);
-  ctx.lineTo(3, -12.5);
-  ctx.quadraticCurveTo(10.5, -11.5, 14, -2.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-14, -2.5);
-  ctx.lineTo(14, -2.5);
-  ctx.moveTo(-14, 0.2);
-  ctx.lineTo(14, 0.2);
-  ctx.moveTo(-14, -2.5);
-  ctx.lineTo(-14, 0.2);
-  ctx.moveTo(14, -2.5);
-  ctx.lineTo(14, 0.2);
-  ctx.stroke();
-  for (const [x, yEnd] of [
-    [-14, 14],
-    [-5.5, 10],
-    [5.5, 10],
-    [14, 14],
-  ]) {
+  ctx.moveTo(-bodyTopHalf, bodyTopY);
+  ctx.lineTo(bodyTopHalf, bodyTopY);
+  ctx.lineTo(bodyBotHalf, bodyBotY);
+  ctx.lineTo(-bodyBotHalf, bodyBotY);
+  ctx.closePath();
+  ctx.fill();
+
+  const wedges = [
+    [-12.5, -8],
+    [-6.5, -2],
+    [2, 6.5],
+    [8.5, 12.5],
+  ];
+  for (const [a, b] of wedges) {
     ctx.beginPath();
-    ctx.moveTo(x, 0.2);
-    ctx.lineTo(x, yEnd);
-    ctx.stroke();
+    ctx.moveTo(0, apexY);
+    ctx.lineTo(a, eaveY);
+    ctx.lineTo(b, eaveY);
+    ctx.closePath();
+    ctx.fill();
   }
+  for (const [a, b] of wedges) {
+    const r = Math.min(2.1, (b - a) / 2);
+    ctx.beginPath();
+    ctx.arc((a + b) / 2, eaveY + 1.1, r, 0, Math.PI);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.moveTo(-3.2, bodyTopY + 2.6);
+  ctx.lineTo(3.2, bodyTopY + 2.6);
+  ctx.lineTo(4.8, bodyBotY);
+  ctx.lineTo(-4.8, bodyBotY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = INK;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(0.6, -15);
+  ctx.lineTo(0.6, -11.4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0.9, -15);
+  ctx.lineTo(5.4, -13.6);
+  ctx.lineTo(0.9, -12.2);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawGlyph(ctx, jenis, kelas) {
   if (jenis === "rambu_kelas_jalan") drawRomanGlyph(ctx, kelas);
   else if (jenis === "rambu_mst") drawMstGlyph(ctx, MST_TON_BY_KELAS[kelas] ?? 8);
   else if (jenis === "rambu_pembatasan") drawTruckSilhouette(ctx);
-  else if (jenis === "tambang") drawPickaxeGlyph(ctx);
+  else if (jenis === "tambang") drawMineGlyph(ctx);
   else drawTentGlyph(ctx);
 }
 
