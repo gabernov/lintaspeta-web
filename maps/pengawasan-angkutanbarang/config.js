@@ -67,6 +67,7 @@ export function enrichPengawasan(pengawasanFC, ruasFC) {
     p.ruas_kelas = ruas?.kelas_jalan || p.kelas_jalan || "";
     p.kode_resmi = ruas?.id_ruas_jalan || null;
     p.ruas_nama_lama = ruas?.nama_lama || "";
+    p.ruas_nama_pu = ruas?.nama_pu || "";
     p.uptd_pu = ruas?.uptd_pu || null;
     p.bers_arteri = String(p.bersinggungan_arteri ?? "").toLowerCase() === "true";
     p.bers_kolektor = String(p.bersinggungan_kolektor ?? "").toLowerCase() === "true";
@@ -220,6 +221,7 @@ export default {
       <b>Ikon:</b> <span style="color:#94a3b8;font-size:11px;font-family:'Fira Code',monospace;">${escHtml(JENIS_ICONS[jenis] || "-")}</span><br/>
       <b>Kode Ruas:</b> ${escHtml(p.kode_ruas || "N/A")}<br/>
       <b>Kode Resmi:</b> ${escHtml(p.kode_resmi || "N/A")}<br/>
+      <b>Nama PU:</b> ${escHtml(p.ruas_nama_pu || "N/A")}<br/>
       <b>Kelas Jalan:</b> ${escHtml(p.kelas_jalan || "N/A")}<br/>
       <b>UPTD:</b> ${uptd}<br/>
       <b>UPTD PU:</b> ${escHtml(p.uptd_pu || "N/A")}<br/>
