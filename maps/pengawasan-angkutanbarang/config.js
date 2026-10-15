@@ -71,6 +71,31 @@ export function enrichPengawasan(pengawasanFC, ruasFC) {
   return pengawasanFC;
 }
 
+// Icon size per jenis. Kelas-jalan signs stay compact because their Roman
+// numeral reads fine small, the tambang illustration is shown larger, and the
+// rest grow from province scale up to a legible working size. MapLibre allows
+// only one zoom-based interpolate per expression, so the zoom curve is the
+// outer expression and the jenis picks the value at each stop.
+const SIZE_STOPS = [
+  // zoom, kelas-jalan, tambang, everything else
+  [7, 0.3, 0.44, 0.34],
+  [10, 0.33, 0.66, 0.5],
+  [13, 0.345, 0.82, 0.62],
+  [16, 0.38, 0.96, 0.72],
+];
+
+const sizeByJenis = (kelasJalan, tambang, other) => [
+  "case",
+  ["==", ["get", "jenis"], "rambu_kelas_jalan"], kelasJalan,
+  ["==", ["get", "jenis"], "tambang"], tambang,
+  other,
+];
+
+const iconSizeExpression = [
+  "interpolate", ["linear"], ["zoom"],
+  ...SIZE_STOPS.flatMap(([z, kj, tb, other]) => [z, sizeByJenis(kj, tb, other)]),
+];
+
 export default {
   id: "pengawasan-angkutanbarang",
   title: "Pengawasan Angkutan Barang",
@@ -165,17 +190,7 @@ export default {
             ],
           ],
         ],
-        // Grow with zoom: dense at province scale, large and legible once the
-        // user zooms into the signs (the artwork carries a lot of detail).
-        "icon-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          7, 0.34,
-          10, 0.5,
-          13, 0.62,
-          16, 0.72,
-        ],
+        "icon-size": iconSizeExpression,
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "icon-anchor": "center",

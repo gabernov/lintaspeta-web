@@ -662,26 +662,33 @@ function drawPickaxeGlyph(ctx) {
 
 function drawTentGlyph(ctx) {
   ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 1.7;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(-13.5, -3.5);
-  ctx.quadraticCurveTo(-7, -13, 0, -13);
-  ctx.quadraticCurveTo(7, -13, 13.5, -3.5);
+  ctx.moveTo(-14, -2.5);
+  ctx.quadraticCurveTo(-10.5, -11.5, -3, -12.5);
+  ctx.lineTo(3, -12.5);
+  ctx.quadraticCurveTo(10.5, -11.5, 14, -2.5);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(-13.5, -3.5);
-  ctx.lineTo(13.5, -3.5);
+  ctx.moveTo(-14, -2.5);
+  ctx.lineTo(14, -2.5);
+  ctx.moveTo(-14, 0.2);
+  ctx.lineTo(14, 0.2);
+  ctx.moveTo(-14, -2.5);
+  ctx.lineTo(-14, 0.2);
+  ctx.moveTo(14, -2.5);
+  ctx.lineTo(14, 0.2);
   ctx.stroke();
   for (const [x, yEnd] of [
-    [-13.5, 13.5],
-    [-5, 10],
-    [5, 10],
-    [13.5, 13.5],
+    [-14, 14],
+    [-5.5, 10],
+    [5.5, 10],
+    [14, 14],
   ]) {
     ctx.beginPath();
-    ctx.moveTo(x, -3.5);
+    ctx.moveTo(x, 0.2);
     ctx.lineTo(x, yEnd);
     ctx.stroke();
   }
