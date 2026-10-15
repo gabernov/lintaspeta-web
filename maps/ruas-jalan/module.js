@@ -2,6 +2,7 @@ import { initParquet, loadParquetToGeoJSON } from "../../shared-core/js/parquet-
 import { flyToBounds, flyToCoords, showPopup, closePopup, geometryBounds } from "../../shared-core/js/map-core.js";
 import { escHtml, toast, initBottomSheet } from "../../shared-core/js/ui-core.js";
 import { ensureXLSX, exportFeaturesToXLSX } from "../../shared-core/js/export-core.js";
+import { geocodePlaces } from "../../shared-core/js/geocode-core.js";
 import config from "./config.js";
 
 export { config };
@@ -23,8 +24,8 @@ let hoveredRoadId = null;
 let coordMarker = null;
 let roadIndexCache = null;
 let roadIndexOwner = null;
-let nomTimer = null;
-let nomAbort = null;
+let placeTimer = null;
+let placeAbort = null;
 let geomAbort = null;
 let dragCounter = 0;
 
@@ -499,8 +500,8 @@ function activateSearchItem(item) {
     const lat = parseFloat(item.dataset.lat);
     const lng = parseFloat(item.dataset.lng);
     checkLocation(lng, lat);
-  } else if (item.dataset.nom !== undefined) {
-    const r = searchDropdown._nomResults[parseInt(item.dataset.nom)];
+  } else if (item.dataset.place !== undefined) {
+    const r = searchDropdown._placeResults[parseInt(item.dataset.place)];
     if (r) {
       const lng = parseFloat(r.lon);
       const lat = parseFloat(r.lat);
@@ -857,8 +858,8 @@ function setupSearch() {
     updateSearchClear();
     if (q.length < 2) { searchDropdown.style.display = "none"; return; }
 
-    if (nomAbort) { nomAbort.abort(); nomAbort = null; }
-    if (nomTimer) { clearTimeout(nomTimer); nomTimer = null; }
+    if (placeAbort) { placeAbort.abort(); placeAbort = null; }
+    if (placeTimer) { clearTimeout(placeTimer); placeTimer = null; }
 
     const coordMatch = raw.match(/^-?\d+\.?\d*\s*[,\s]\s*-?\d+\.?\d*$/);
     if (coordMatch) {
@@ -910,7 +911,7 @@ function setupSearch() {
 
     searchDropdown._results = roadResults;
     searchDropdown._roadTotal = roadTotal;
-    searchDropdown._nomResults = null;
+    searchDropdown._placeResults = null;
 
     if (roadHtml) {
       if (roadTotal > roadResults.length) {
@@ -922,21 +923,29 @@ function setupSearch() {
     }
     searchDropdown.style.display = "block";
 
-    nomTimer = setTimeout(async () => {
-      nomAbort = new AbortController();
+    placeTimer = setTimeout(async () => {
+      placeAbort = new AbortController();
       try {
-        const resp = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(raw)}&format=json&limit=5&accept-language=id`,
-          { signal: nomAbort.signal, headers: { 'User-Agent': 'PetaJalanProvinsi/1.0' } }
-        );
-        const data = await resp.json();
-        const hasPlaces = data && data.length > 0;
+        const places = await geocodePlaces(raw, {
+          signal: placeAbort.signal,
+          limit: 5,
+          center: map ? [map.getCenter().lng, map.getCenter().lat] : null,
+        });
+        const data = places.map((r) => ({
+          lat: String(r.lat),
+          lon: String(r.lng),
+          osm_type: r.osmType,
+          osm_id: r.osmId,
+          display_name: [r.title, r.subtitle].filter(Boolean).join(", "),
+          boundingbox: r.bbox,
+        }));
+        const hasPlaces = data.length > 0;
         const hasRoads = roadHtml.length > 0;
         let html = "";
         if (hasPlaces) {
           html += `<div class="search-section-header">📍 Places</div>`;
           html += data.map((r, i) => `
-            <div class="search-item" data-nom="${i}" data-osm-type="${r.osm_type}" data-osm-id="${r.osm_id}">
+            <div class="search-item" data-place="${i}" data-osm-type="${r.osm_type}" data-osm-id="${r.osm_id}">
               <div class="s-name">${escHtml(r.display_name.split(",")[0])}</div>
               <div class="s-meta">${escHtml(r.display_name.split(",").slice(1).join(",").trim())}</div>
             </div>
@@ -954,10 +963,10 @@ function setupSearch() {
           html = `<div class="search-empty">Tidak ditemukan</div>`;
         }
         searchDropdown.innerHTML = html;
-        searchDropdown._nomResults = data;
+        searchDropdown._placeResults = data;
       } catch (err) {
         if (err.name !== "AbortError") {
-          console.warn("Nominatim:", err.message);
+          console.warn("Photon:", err.message);
           if (!roadHtml) {
             searchDropdown.innerHTML = `<div class="search-empty">Tidak ditemukan. Periksa kembali kata kunci.</div>`;
           }
@@ -1132,8 +1141,8 @@ export const module = {
     clearHighlight();
 
     // Clear timers & aborts
-    if (nomTimer) { clearTimeout(nomTimer); nomTimer = null; }
-    if (nomAbort) { nomAbort.abort(); nomAbort = null; }
+    if (placeTimer) { clearTimeout(placeTimer); placeTimer = null; }
+    if (placeAbort) { placeAbort.abort(); placeAbort = null; }
     if (geomAbort) { geomAbort.abort(); geomAbort = null; }
 
     // Remove document/window listeners

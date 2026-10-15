@@ -49,6 +49,14 @@ async function throttle() {
   lastCallAt = Date.now();
 }
 
+// Photon returns extent as [minLon, maxLat, maxLon, minLat]; callers expect
+// Nominatim's boundingbox order [minLat, maxLat, minLng, maxLng].
+function extentToBbox(extent) {
+  if (!Array.isArray(extent) || extent.length !== 4) return null;
+  const [minLng, maxLat, maxLon, minLat] = extent;
+  return [minLat, maxLat, minLng, maxLon];
+}
+
 export async function geocodePlaces(q, { signal, limit = 5, center = null } = {}) {
   const centerKey = center ? `${center[0].toFixed(2)},${center[1].toFixed(2)}` : "";
   const key = `${q.trim().toLowerCase()}|${limit}|${centerKey}`;
@@ -76,6 +84,7 @@ export async function geocodePlaces(q, { signal, limit = 5, center = null } = {}
         lng: c[0],
         osmType: p.osm_type,
         osmId: p.osm_id,
+        bbox: extentToBbox(p.extent),
       };
     }).filter((r) => isFinite(r.lat) && isFinite(r.lng));
     cache.set(key, { t: Date.now(), data: out });
