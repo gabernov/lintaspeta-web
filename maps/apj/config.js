@@ -5,6 +5,8 @@ export const UPTD_COLORS = {
   "UPTD 2": "#2563EB",
   "UPTD 3": "#059669",
   "UPTD 4": "#7C3AED",
+  "UPTD 5": "#EA580C",
+  "UPTD 6": "#0891B2",
 };
 export const UPTD_DEFAULT = "#6B7280";
 
@@ -57,6 +59,8 @@ export default {
           "UPTD-II", UPTD_COLORS["UPTD 2"],
           "UPTD-III", UPTD_COLORS["UPTD 3"],
           "UPTD-IV", UPTD_COLORS["UPTD 4"],
+          "UPTD-V", UPTD_COLORS["UPTD 5"],
+          "UPTD-VI", UPTD_COLORS["UPTD 6"],
           "#94A3B8"
         ],
         "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.5, 12, 2, 16, 3, 20, 4],

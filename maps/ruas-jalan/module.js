@@ -9,6 +9,7 @@ export { config };
 const UPTD_COLORS = config.UPTD_COLORS || {
   "UPTD-I": "#E11D48", "UPTD-II": "#2563EB",
   "UPTD-III": "#059669", "UPTD-IV": "#7C3AED",
+  "UPTD-V": "#EA580C", "UPTD-VI": "#0891B2",
 };
 const UPTD_DEFAULT = config.UPTD_DEFAULT || "#6B7280";
 
@@ -245,6 +246,7 @@ function addRoadsLayer(forceReadd = false) {
         "match", ["get", "unit_kerja_kode"],
         "UPTD-I", UPTD_COLORS["UPTD-I"], "UPTD-II", UPTD_COLORS["UPTD-II"],
         "UPTD-III", UPTD_COLORS["UPTD-III"], "UPTD-IV", UPTD_COLORS["UPTD-IV"],
+        "UPTD-V", UPTD_COLORS["UPTD-V"], "UPTD-VI", UPTD_COLORS["UPTD-VI"],
         UPTD_DEFAULT
       ],
       "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 12, 2.5, 16, 4, 20, 6],
