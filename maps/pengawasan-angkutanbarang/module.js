@@ -468,7 +468,12 @@ function fitBounds() {
 // drawn as the actual Indonesian signs — a white disc inside a red ring with the
 // sign's own pictogram — while tambang/posko are not traffic signs and use a
 // white badge carrying their illustration.
-const ICON_SIZE = 40;
+// ICON_UNITS is the design grid the glyph coordinates below are written in;
+// ICON_SIZE is the actual canvas resolution. Drawing at a higher resolution
+// than the grid keeps the sign detail (numbers, axle pictogram) crisp once the
+// icons are scaled up on the map.
+const ICON_UNITS = 40;
+const ICON_SIZE = 64;
 const SIGN_RED = "#EF4444";
 const INK = "#111827";
 const OUTLINE = "#0F172A";
@@ -711,7 +716,9 @@ const SIGN_JENIS = new Set(["rambu_kelas_jalan", "rambu_mst", "rambu_pembatasan"
 
 function buildJenisIcon(jenis, kelas) {
   const { ctx } = newIconCanvas();
-  const S = ICON_SIZE;
+  const S = ICON_UNITS;
+  const k = ICON_SIZE / ICON_UNITS;
+  ctx.scale(k, k);
   if (SIGN_JENIS.has(jenis)) signBase(ctx, S);
   else badgeBase(ctx, S);
   ctx.save();

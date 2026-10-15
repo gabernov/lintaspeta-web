@@ -165,7 +165,17 @@ export default {
             ],
           ],
         ],
-        "icon-size": 0.55,
+        // Grow with zoom: dense at province scale, large and legible once the
+        // user zooms into the signs (the artwork carries a lot of detail).
+        "icon-size": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          7, 0.34,
+          10, 0.5,
+          13, 0.62,
+          16, 0.72,
+        ],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "icon-anchor": "center",
