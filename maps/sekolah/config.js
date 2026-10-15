@@ -5,8 +5,6 @@ export const UPTD_COLORS = {
   "UPTD-II": "#2563EB",
   "UPTD-III": "#059669",
   "UPTD-IV": "#7C3AED",
-  "UPTD-V": "#EA580C",
-  "UPTD-VI": "#0891B2",
 };
 export const UPTD_DEFAULT = "#6B7280";
 
@@ -34,8 +32,6 @@ export default {
           "UPTD-II", UPTD_COLORS["UPTD-II"],
           "UPTD-III", UPTD_COLORS["UPTD-III"],
           "UPTD-IV", UPTD_COLORS["UPTD-IV"],
-          "UPTD-V", UPTD_COLORS["UPTD-V"],
-          "UPTD-VI", UPTD_COLORS["UPTD-VI"],
           UPTD_DEFAULT
         ],
         "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 12, 2.5, 16, 4, 20, 6],
@@ -67,8 +63,6 @@ export default {
     { label: "UPTD-II", color: UPTD_COLORS["UPTD-II"], type: "line" },
     { label: "UPTD-III", color: UPTD_COLORS["UPTD-III"], type: "line" },
     { label: "UPTD-IV", color: UPTD_COLORS["UPTD-IV"], type: "line" },
-    { label: "UPTD-V", color: UPTD_COLORS["UPTD-V"], type: "line" },
-    { label: "UPTD-VI", color: UPTD_COLORS["UPTD-VI"], type: "line" },
   ],
   popup: (feature) => {
     const p = feature.properties;

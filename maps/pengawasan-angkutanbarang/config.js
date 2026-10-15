@@ -25,18 +25,14 @@ export const UPTD_COLORS = {
   "UPTD-II": "#2563EB",
   "UPTD-III": "#059669",
   "UPTD-IV": "#7C3AED",
-  "UPTD-V": "#EA580C",
-  "UPTD-VI": "#0891B2",
 };
-export const UPTD_ORDER = ["UPTD-I", "UPTD-II", "UPTD-III", "UPTD-IV", "UPTD-V", "UPTD-VI"];
+export const UPTD_ORDER = ["UPTD-I", "UPTD-II", "UPTD-III", "UPTD-IV"];
 export const UPTD_DEFAULT = "#94A3B8";
 export const UPTD_LABEL = {
   "UPTD-I": "UPTD I",
   "UPTD-II": "UPTD II",
   "UPTD-III": "UPTD III",
   "UPTD-IV": "UPTD IV",
-  "UPTD-V": "UPTD V",
-  "UPTD-VI": "UPTD VI",
 };
 
 const KABKOTA_OVERRIDES = { bandungbarat: "Bandung Barat" };
@@ -71,6 +67,7 @@ export function enrichPengawasan(pengawasanFC, ruasFC) {
     p.ruas_kelas = ruas?.kelas_jalan || p.kelas_jalan || "";
     p.kode_resmi = ruas?.id_ruas_jalan || null;
     p.ruas_nama_lama = ruas?.nama_lama || "";
+    p.uptd_pu = ruas?.uptd_pu || null;
     p.bers_arteri = String(p.bersinggungan_arteri ?? "").toLowerCase() === "true";
     p.bers_kolektor = String(p.bersinggungan_kolektor ?? "").toLowerCase() === "true";
   }
@@ -141,8 +138,6 @@ export default {
           "UPTD-II", UPTD_COLORS["UPTD-II"],
           "UPTD-III", UPTD_COLORS["UPTD-III"],
           "UPTD-IV", UPTD_COLORS["UPTD-IV"],
-          "UPTD-V", UPTD_COLORS["UPTD-V"],
-          "UPTD-VI", UPTD_COLORS["UPTD-VI"],
           UPTD_DEFAULT,
         ],
         "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.5, 12, 3, 16, 5, 20, 7],
@@ -227,6 +222,7 @@ export default {
       <b>Kode Resmi:</b> ${escHtml(p.kode_resmi || "N/A")}<br/>
       <b>Kelas Jalan:</b> ${escHtml(p.kelas_jalan || "N/A")}<br/>
       <b>UPTD:</b> ${uptd}<br/>
+      <b>UPTD PU:</b> ${escHtml(p.uptd_pu || "N/A")}<br/>
       <b>Kab/Kota:</b> ${escHtml(p.kabkota_label || "N/A")}<br/>
       <b>Ujung Ruas:</b> ${escHtml(p.ujung_ruas || "N/A")}<br/>
       <b>Status:</b> ${escHtml(p.status || "N/A")}<br/>
